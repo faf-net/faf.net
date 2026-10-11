@@ -60,13 +60,17 @@ let theme = "amiga";
 try { if (localStorage.getItem("faf-wb-theme") === "workbench") theme = "workbench"; } catch (_) {}
 let PAL = THEMES[theme].pal;
 let [BL, WH, BK, OR] = PAL;
-const hexRGB = h => [parseInt(h.slice(1,3),16), parseInt(h.slice(3,5),16), parseInt(h.slice(5,7),16)];
+const _cc = document.createElement("canvas").getContext("2d");
+const hexRGB = h => {
+  if (h[0] !== "#") { _cc.fillStyle = "#000"; _cc.fillStyle = h; h = _cc.fillStyle; }   // any CSS colour → #rrggbb
+  return [parseInt(h.slice(1,3),16), parseInt(h.slice(3,5),16), parseInt(h.slice(5,7),16)];
+};
 let RGB = PAL.map(hexRGB);
 let SPR = THEMES[theme].spr;                 // pointer sprite colours
 let GURU = THEMES[theme].guru;
 
 const GENESIS = Date.UTC(2001, 3, 1);    // first light of faf.net
-const FREE0 = 845616;                    // "free memory" with nothing open
+const FREE0 = 402512;                    // A500 with 512K chip RAM, Workbench loaded, nothing open
 const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const cv = document.getElementById("scr");
@@ -147,8 +151,8 @@ function text(s, x, y, col, bg) {
 }
 
 /* ---------- icons: drawn into 4-colour index buffers ------------------ */
-function makeIcon(w, h, fn) {
-  const d = new Uint8Array(w * h);
+function makeIcon(w, h, fn, alt) {
+  let d = new Uint8Array(w * h);
   const g = {
     px(x, y, c) { x |= 0; y |= 0; if (x >= 0 && y >= 0 && x < w && y < h) d[y * w + x] = c; },
     rect(x, y, ww, hh, c) { for (let j = y; j < y + hh; j++) for (let i = x; i < x + ww; i++) g.px(i, j, c); },
@@ -181,47 +185,80 @@ function makeIcon(w, h, fn) {
     }
   };
   fn(g);
-  const mk = xor => {
+  const dn = d; let ds = null;
+  if (alt) { d = ds = new Uint8Array(w * h); alt(g); }   // alternate image instead of complement
+  const mk = (src, xor) => {
     const c = document.createElement("canvas"); c.width = w; c.height = h;
     const x = c.getContext("2d"), id = x.createImageData(w, h);
-    for (let i = 0; i < w * h; i++) { const col = RGB[d[i] ^ xor]; id.data.set([col[0], col[1], col[2], 255], i * 4); }
+    for (let i = 0; i < w * h; i++) { if (src[i] === 4) continue; const col = RGB[src[i] ^ xor]; id.data.set([col[0], col[1], col[2], 255], i * 4); }   // 4 = transparent
     x.putImageData(id, 0, 0);
     return c;
   };
   const ic = { w, h };
-  ic.paint = () => { ic.n = mk(0); ic.s = mk(3); };   // n = normal, s = selected (complemented)
+  ic.paint = () => { ic.n = mk(dn, 0); ic.s = ds ? mk(ds, 0) : mk(dn, 3); };   // n = normal, s = selected (complemented)
   ic.paint();
   return ic;
 }
 
 const ICON = {
-  disk: makeIcon(34, 18, g => {
-    g.rect(0, 0, 34, 18, 1); g.frame(0, 0, 34, 18, 2); g.rect(0, 0, 3, 1, 0); g.px(0, 1, 0);
-    g.rect(9, 0, 16, 7, 3); g.frame(9, 0, 16, 7, 2); g.rect(18, 1, 4, 5, 2);
-    g.frame(5, 9, 24, 9, 2); g.rect(8, 11, 18, 1, 0); g.rect(8, 13, 18, 1, 0); g.rect(8, 15, 12, 1, 0);
+  disk: makeIcon(35, 16, g => {             // plain disk, like RAM DISK (measured from WB 1.3)
+    g.rect(0, 0, 35, 16, 4); g.poly([[0,0],[31,0],[34,3],[34,15],[0,15]], 1, 2); g.rect(1, 0, 1, 16, 2); g.rect(33, 3, 1, 13, 2);
+    g.rect(8, 0, 17, 5, 3); g.rect(8, 0, 17, 1, 2); g.rect(16, 1, 3, 3, 2);
   }),
-  drawer: makeIcon(56, 18, g => {
-    g.poly([[0,5],[6,0],[55,0],[49,5]], 1, 2);
-    g.poly([[49,5],[55,0],[55,12],[49,17]], 1, 2);
-    g.rect(0, 5, 50, 13, 1); g.frame(0, 5, 50, 13, 2);
-    g.frame(4, 8, 42, 7, 2); g.rect(19, 10, 12, 1, 2); g.rect(17, 11, 16, 1, 2);
+  picture: makeIcon(40, 20, g => {          // the Kickstart 1.3 disk in hand, in miniature
+    g.rect(0, 0, 40, 20, 4);
+    g.poly([[13,0],[35,0],[38,3],[38,15],[13,15]], 0, 2); g.rect(13, 0, 1, 16, 2);
+    g.rect(18, 0, 12, 5, 1); g.frame(18, 0, 12, 5, 2); g.rect(25, 1, 2, 3, 2);
+    g.rect(19, 8, 18, 7, 1); g.frame(19, 8, 18, 7, 2); g.rect(23, 10, 11, 1, 0); g.rect(23, 12, 9, 1, 2);
+    g.poly([[2,19],[2,12],[5,9],[12,8],[14,10],[14,15],[11,19]], 1, 2);   // palm
+    g.poly([[10,10],[15,8],[21,9],[21,11],[15,12],[11,12]], 1, 2);        // thumb on the label
+    g.poly([[13,15],[22,15],[22,17],[14,18]], 1, 2);                      // fingers under the disk
+    g.line(16, 16, 20, 16, 2);
+  }),
+  sysdisk: makeIcon(36, 15, g => {          // the "System" disk, measured pixel by pixel from WB 1.3
+    g.rect(0, 0, 36, 15, 2); g.rect(34, 0, 2, 1, 4); g.px(35, 1, 4);     // body, corner notch (transparent)
+    g.rect(9, 0, 17, 5, 3); g.rect(19, 1, 4, 3, 2);                      // shutter + slot
+    g.rect(2, 13, 2, 1, 0);                                              // write-protect hole
+    g.rect(6, 7, 23, 8, 1);                                              // label to the bottom edge
+    for (let i = 0; i < 7; i++) for (const o of [0, 4]) { g.px(7 + i + o, 13 - i, 2); g.px(8 + i + o, 13 - i, 3); g.px(9 + i + o, 13 - i, 2); }
+    for (const [x, y] of [[21,7],[22,7],[23,7],[24,7],[20,8],[25,8],[19,9],[21,9],[23,9],[24,9],[25,9],[26,9],[20,10],[21,10],[22,10],[25,10],[26,10]]) g.px(x, y, 2);
+  }),
+  drawer: makeIcon(77, 18, g => {           // closed drawer (measured from WB 1.3) …
+    g.poly([[0,3],[11,0],[72,0],[66,3]], 1, 2);
+    g.poly([[66,3],[72,0],[72,12],[66,15]], 1, 2);
+    g.rect(0, 3, 67, 13, 1); g.frame(0, 3, 67, 13, 2); g.rect(1, 3, 1, 13, 2); g.rect(65, 3, 1, 13, 2);
+    g.frame(5, 5, 56, 8, 2); g.rect(6, 5, 1, 8, 2); g.rect(59, 5, 1, 8, 2);
+    g.rect(25, 8, 2, 1, 2); g.rect(39, 8, 2, 1, 2); g.rect(25, 9, 16, 1, 2);
+  }, g => {                                   // … and pulled out when selected
+    g.poly([[3,3],[14,0],[75,0],[68,3]], 1, 2);
+    g.poly([[68,3],[75,0],[75,13],[68,16]], 1, 2);
+    g.rect(3, 3, 66, 14, 1); g.frame(3, 3, 66, 14, 2); g.rect(4, 3, 1, 14, 2); g.rect(67, 3, 1, 14, 2);
+    g.rect(8, 5, 55, 1, 2);
+    for (let x = 8; x < 62; x += 4) { g.rect(x, 6, 2, 1, 2); g.rect(x + 2, 7, 2, 1, 2); }
+    g.rect(1, 7, 6, 1, 2);
+    g.poly([[58,8],[62,6],[62,15],[58,17]], 1, 2);
+    g.rect(0, 8, 59, 10, 1); g.frame(0, 8, 59, 10, 2); g.rect(1, 8, 1, 10, 2); g.rect(57, 8, 1, 10, 2);
+    g.rect(22, 13, 2, 1, 2); g.rect(35, 13, 2, 1, 2); g.rect(21, 14, 17, 1, 2);
   }),
   trash: makeIcon(32, 22, g => {
     g.rect(12, 0, 8, 1, 2); g.rect(11, 1, 1, 2, 2); g.rect(20, 1, 1, 2, 2);
-    g.rect(3, 3, 26, 3, 3); g.frame(3, 3, 26, 3, 2);
-    g.poly([[5,6],[26,6],[23,21],[8,21]], 3, 2);
-    g.line(10, 7, 11, 20, 2); g.line(14, 7, 14, 20, 2); g.line(17, 7, 17, 20, 2); g.line(21, 7, 20, 20, 2);
-    g.rect(1, 21, 7, 1, 2);
+    g.poly([[3,3],[28,3],[30,6],[1,6]], 3, 2);
+    g.rect(6, 4, 14, 1, 1);
+    g.poly([[3,7],[28,7],[25,21],[6,21]], 3, 2);
+    g.rect(3, 7, 26, 1, 2);
+    g.line(7, 8, 9, 20, 2); g.line(11, 8, 12, 20, 2); g.line(15, 8, 15, 20, 2); g.line(19, 8, 18, 20, 2); g.line(23, 8, 21, 20, 2);
+    g.rect(5, 9, 1, 8, 1);
+    g.rect(0, 20, 7, 2, 2); g.rect(2, 19, 4, 1, 2);
   }),
   doc: makeIcon(26, 20, g => {
     g.poly([[0,0],[19,0],[25,4],[25,19],[0,19]], 1, 2);
     g.line(19, 0, 19, 4, 2); g.line(19, 4, 25, 4, 2);
     g.rect(3, 3, 12, 2, 3); g.rect(3, 7, 19, 1, 0); g.rect(3, 10, 19, 1, 0); g.rect(3, 13, 15, 1, 0); g.rect(3, 16, 19, 1, 2);
   }),
-  wopr: makeIcon(36, 21, g => {
-    g.rect(0, 0, 36, 16, 1); g.frame(0, 0, 36, 16, 2); g.rect(3, 2, 30, 11, 2);
-    g.rect(6, 4, 12, 1, 3); g.rect(6, 6, 20, 1, 3); g.rect(6, 8, 8, 1, 3); g.rect(6, 10, 4, 2, 3);
-    g.rect(14, 16, 8, 2, 2); g.rect(8, 18, 20, 3, 1); g.frame(8, 18, 20, 3, 2);
+  wopr: makeIcon(36, 18, g => {             // WOPR as a mainframe "volume" — lamps blink at draw time
+    g.rect(0, 0, 36, 18, 2); g.rect(0, 0, 36, 1, 1); g.rect(0, 0, 1, 18, 1);
+    g.txt("WOPR", 2, 1, 3);
+    for (let y = 11; y < 17; y += 2) for (let x = 3; x < 33; x += 3) g.rect(x, y, 2, 1, 1);
   }),
   clock: makeIcon(30, 20, g => {
     g.ell(15, 10, 14, 9, 1, 2);
@@ -326,8 +363,9 @@ const aboutLines = () => [
 const mkIcon = (label, img, act) => ({ label, img, act, cx:0, y:0, rx:0, sel:false, lw:label.length * 8 });
 
 const deskIcons = [
-  mkIcon("faf.net",  "disk", () => openDisk()),
-  mkIcon("RAM DISK", "disk", () => openRam())
+  mkIcon("faf.net",  "sysdisk", () => openDisk()),
+  mkIcon("RAM DISK", "disk", () => openRam()),
+  mkIcon("WOPR",     "wopr", () => goWopr())
 ];
 function layoutDesk(reset) {
   deskIcons.forEach((ic, i) => {
@@ -342,12 +380,19 @@ function content(w) { const m = metrics(w); return { x: w.x + m.L, y: w.y + m.T,
 
 function layoutIcons(w) {
   const c = content(w), cell = 78, cols = Math.max(1, Math.floor((c.w - 8) / cell));
+  if (w.rows) {                                 // fixed rows, e.g. tools on top, drawers below
+    let i = 0;
+    w.rows.forEach((n, r) => { for (let k = 0; k < n && i < w.icons.length; k++, i++) { w.icons[i].cx = 4 + (cell >> 1) + k * cell; w.icons[i].y = 4 + r * 36; } });
+    return;
+  }
   w.icons.forEach((ic, i) => { ic.cx = 4 + (cell >> 1) + (i % cols) * cell; ic.y = 4 + Math.floor(i / cols) * 36; });
 }
 
 function openWin(o) {
   const ex = wins.find(w => w.id === o.id);
   if (ex) { raise(ex); active = ex; return ex; }
+  if (!o.noMemCheck && freeMem() - (o.mem || 0) < 16384) { noMem(o.title); return null; }
+  if (!o.noMemCheck) memFails = 0;
   const w = Object.assign({ icons:[], lines:[] }, o);
   w.w = Math.min(w.w, LW - 8);
   w.h = Math.min(w.h, LH - 14);
@@ -367,25 +412,50 @@ function closeWin(w) {
 }
 const cascade = () => wins.length * 14;
 
-function openDisk() {
-  openWin({ id:"disk", title:"faf.net", type:"drawer", gauge:true, fill:.79, mem:6144,
-    x: LW < 520 ? 6 : Math.floor(LW * .1), y: 22, w: 278, h: 136,
-    icons: [ mkIcon("About", "doc", openAbout), mkIcon("WOPR", "wopr", goWopr),
-             mkIcon("Clock", "clock", openClock), mkIcon("Shell", "shell", openShell),
-             mkIcon("GitHub", "github", goGithub), mkIcon("Workbench", "palette", toggleTheme),
+function openDisk(id = "disk") {
+  openWin({ id, title:"faf.net", type:"drawer", gauge:true, fill:.79, mem:18432,
+    x: (LW < 520 ? 6 : Math.floor(LW * .1)) + (id === "disk" ? 0 : 24), y: 22 + (id === "disk" ? 0 : 16), w: 278, h: 136,
+    rows: [3, 3, 1],                          // About · GitHub · Workbench / System · Utilities · Games / Trashcan
+    icons: [ mkIcon("About", "doc", openAbout), mkIcon("GitHub", "github", goGithub), mkIcon("Workbench", "palette", toggleTheme),
+             mkIcon("System", "drawer", openSystem), mkIcon("Utilities", "drawer", openUtil), mkIcon("Games", "drawer", openGames),
              mkIcon("Trashcan", "trash", openTrash) ] });
 }
-function openRam()   { openWin({ id:"ram",   title:"RAM DISK", type:"drawer", gauge:true, fill:1, mem:2048, x:LW - 280, y:40, w:210, h:70 }); }
-function openTrash() { openWin({ id:"trash", title:"Trashcan", type:"drawer", gauge:false, mem:2048, x:60 + cascade(), y:60 + cascade(), w:200, h:70 }); }
+function openSystem() {
+  openWin({ id:"system", title:"System", type:"drawer", gauge:false, mem:12288, x:50 + cascade(), y:40 + cascade(), w:266, h:64,
+    icons: [ mkIcon("Kickstart", "picture", openKick), mkIcon("Shell", "shell", openShell), mkIcon("Clock", "clock", openClock) ] });
+}
+const KICK = new Image();
+KICK.onload = () => dirty();
+KICK.src = "kickstart13.png";
+let multiN = 0;
+function openKick() { openWin({ id:"kick" + (++multiN), title:"Kickstart 1.3", type:"picture", mem:163840, x:LW < 520 ? 10 : Math.floor(LW * .1) + 150, y:30 + cascade(), w:250, h:140 }); }
+function drawPicture(c) {
+  fill(c.x, c.y, c.w, c.h, "#ffffff");
+  if (!KICK.complete || !KICK.naturalWidth) return;
+  // square image pixels → half as many lines as hires pixels
+  let dw = c.w - 8, dh = Math.round(dw * KICK.naturalHeight / KICK.naturalWidth / 2);
+  if (dh > c.h - 4) { dh = c.h - 4; dw = Math.round(dh * 2 * KICK.naturalWidth / KICK.naturalHeight); }
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(KICK, c.x + ((c.w - dw) >> 1), c.y + ((c.h - dh) >> 1), dw, dh);
+  ctx.imageSmoothingEnabled = false;
+}
+function openUtil() {
+  openWin({ id:"util", title:"Utilities", type:"drawer", gauge:false, mem:12288, x:60 + cascade(), y:50 + cascade(), w:266, h:100,
+    icons: [ mkIcon("X-Copy", "xcopy", () => startXCopy()), mkIcon("VirusX", "virusx", () => openVirusX()),
+             mkIcon("SysInfo", "sysinfo", () => openSysInfo()),
+             mkIcon("SCA-Virus", "sca", () => startSCA()), mkIcon("ByteBandit", "bandit", () => startBB()) ] });
+}
+function openRam()   { openWin({ id:"ram",   title:"RAM DISK", type:"drawer", gauge:true, fill:1, mem:8192, x:LW - 280, y:40, w:210, h:70 }); }
+function openTrash() { openWin({ id:"trash", title:"Trashcan", type:"drawer", gauge:false, mem:8192, x:60 + cascade(), y:60 + cascade(), w:200, h:70 }); }
 function openAbout() {
   const L = aboutLines(), maxc = Math.max(...L.map(s => s.length));
-  openWin({ id:"about", title:"About", type:"text", mem:3712,
+  openWin({ id:"about" + (++multiN), title:"About", type:"text", mem:12288,
     x: LW < 520 ? 10 : Math.floor(LW * .1) + 120, y: 34 + cascade(), w: maxc * 8 + 16, h: L.length * 8 + 17 });
 }
-function openClock() { openWin({ id:"clock", title:"Clock", type:"clock", mem:5128, x:LW - 260, y:LH - 110, w:170, h:84 }); }
+function openClock() { openWin({ id:"clock" + (++multiN), title:"Clock", type:"clock", mem:22528, x:LW - 230 - cascade(), y:LH - 124 - cascade(), w:150, h:104 }); }
 function openShell() {
   if (!wins.find(w => w.id === "shell")) { shellNo++; sh.lines = ["New Shell process " + shellNo]; sh.inp = ""; }
-  openWin({ id:"shell", title:"AmigaShell", type:"shell", mem:13456, x:10 + cascade(), y:LH - 130, w:Math.min(560, LW - 20), h:118 });
+  openWin({ id:"shell", title:"AmigaShell", type:"shell", mem:40960, x:10 + cascade(), y:LH - 130, w:Math.min(560, LW - 20), h:118 });
 }
 const GITHUB = "https://github.com/faf-net";
 function goGithub() {
@@ -455,6 +525,8 @@ function drawWin(w) {
   else if (w.type === "text") aboutLines().forEach((s, i) => text(s, c.x + 4, c.y + 2 + i * 8, i === 0 ? OR : WH));
   else if (w.type === "clock") drawClock(c);
   else if (w.type === "shell") drawShell(c, act);
+  else if (w.type === "panel") drawPanel(w, c);
+  else if (w.type === "picture") drawPicture(c);
   ctx.restore();
   if (w.type !== "drawer") { const sx = w.x + w.w - 20, sy = w.y + w.h - 11; fill(sx, sy, 16, 9, WH); sizeGadget(sx, sy); }
 }
@@ -462,6 +534,13 @@ function drawWin(w) {
 function drawIcon(ic, ox, oy) {
   const im = ICON[ic.img], ix = ox + ic.cx - (im.w >> 1), iy = oy + ic.y;
   ctx.drawImage(ic.sel ? im.s : im.n, ix, iy);
+  if (ic.img === "wopr") {                     // WOPR's lamps never rest
+    const tk = Math.floor(performance.now() / 350);
+    for (let k = 0, y = 11; y < 17; y += 2) for (let x = 3; x < 33; x += 3, k++) {
+      const v = ((k * 2654435761 + tk * 40503 + (k >> 2) * tk) >>> 0) % 7;
+      if (v < 3) fill(ix + x, iy + y, 2, 1, ic.sel ? [BL, WH, BK][v] : [OR, BK, OR][v]);
+    }
+  }
   text(ic.label, ox + ic.cx - (ic.lw >> 1), iy + im.h + 2, WH);
 }
 function iconHit(list, x, y) {
@@ -475,18 +554,42 @@ function allIcons() { return deskIcons.concat(...wins.map(w => w.icons)); }
 function deselectAll() { allIcons().forEach(ic => { ic.sel = false; }); }
 
 /* ---------- clock & shell --------------------------------------------- */
+function fillPoly(pts, c) {
+  let mn = 1e9, mx = -1e9;
+  pts.forEach(q => { mn = Math.min(mn, q[1]); mx = Math.max(mx, q[1]); });
+  for (let y = Math.ceil(mn); y <= Math.floor(mx); y++) {
+    const xs = [];
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[i], b = pts[(i + 1) % pts.length];
+      if ((a[1] <= y && b[1] > y) || (b[1] <= y && a[1] > y)) xs.push(a[0] + (y - a[1]) * (b[0] - a[0]) / (b[1] - a[1]));
+    }
+    xs.sort((a, b) => a - b);
+    for (let k = 0; k + 1 < xs.length; k += 2) fill(Math.round(xs[k]), y, Math.max(1, Math.round(xs[k + 1]) - Math.round(xs[k]) + 1), 1, c);
+  }
+}
 function drawClock(c) {
-  const cx = c.x + (c.w >> 1), cy = c.y + (c.h >> 1);
-  const rx = Math.max(10, Math.min((c.w >> 1) - 8, ((c.h >> 1) - 3) * 2)), ry = rx >> 1;
-  ellipse(cx, cy, rx, ry, BK); ellipse(cx, cy, rx - 2, ry - 1, WH);
-  for (let i = 0; i < 12; i++) {
-    const a = i * Math.PI / 6, tx = cx + Math.round((rx - 6) * Math.sin(a)), ty = cy - Math.round((ry - 3) * Math.cos(a));
-    if (i % 3) fill(tx - 1, ty, 2, 1, BK); else fill(tx - 2, ty - 1, 4, 2, BL);
+  const avail = c.h - 13, cx = c.x + (c.w >> 1);
+  const rx = Math.max(12, Math.min((c.w >> 1) - 6, (avail >> 1) * 2 - 4)), ry = rx >> 1, cy = c.y + 3 + ry;
+  ellipse(cx, cy, rx + 3, ry + 2, BK); ellipse(cx, cy, rx, ry, WH);
+  const P = (a, r) => [cx + r * rx * Math.sin(a), cy - r * ry * Math.cos(a)];
+  for (let i = 0; i < 60; i++) {
+    const [x, y] = P(i * Math.PI / 30, .88).map(Math.round);
+    if (i % 5) fill(x, y, 1, 1, BK);
+    else { fill(x - 1, y - 1, 2, 1, BK); fill(x - 2, y, 5, 1, BK); fill(x - 1, y + 1, 2, 1, BK); }
   }
   const d = new Date(), s = d.getSeconds(), m = d.getMinutes() + s / 60, h = (d.getHours() % 12) + m / 60;
-  const hand = (frac, len, col, t) => { const a = frac * 2 * Math.PI; line(cx, cy, cx + (rx - 4) * len * Math.sin(a), cy - (ry - 2) * len * Math.cos(a), col, t); };
-  hand(h / 12, .55, BK, 3); hand(m / 60, .85, BK, 2); hand(s / 60, .9, OR, 1);
+  const kite = (a, len, w) => {
+    const [tx, ty] = P(a, len), [bx, by] = P(a, -.08), [mx, my] = P(a, len * .22);
+    const ox = Math.cos(a) * w * rx, oy = Math.sin(a) * w * ry;
+    fillPoly([[tx, ty], [mx + ox, my + oy], [bx, by], [mx - ox, my - oy]], BK);
+  };
+  kite(h / 12 * 2 * Math.PI, .5, .07);
+  kite(m / 60 * 2 * Math.PI, .78, .055);
+  const [sx, sy] = P(s / 60 * 2 * Math.PI, .82);
+  line(cx, cy, sx, sy, OR);
   fill(cx - 1, cy, 3, 1, OR);
+  const ds = p2(d.getDate()) + "." + p2(d.getMonth() + 1) + "." + d.getFullYear();
+  text(ds, cx - ds.length * 4, c.y + c.h - 10, WH);
 }
 function wrapInto(out, s, cols) {
   if (!s.length) { out.push(""); return; }
@@ -519,7 +622,8 @@ function exec(raw) {
     case "": break;
     case "help": case "?":
       out("DIR INFO DATE AVAIL VERSION ECHO TYPE");
-      out("ABOUT CLOCK WOPR GITHUB PALETTE CLS ENDCLI"); break;
+      out("ABOUT CLOCK WOPR GITHUB PALETTE CLS ENDCLI");
+      out("XCOPY VIRUSX SYSINFO CAVES REBOOT SOUND"); break;
     case "dir": case "list":
       out("     Trashcan (dir)"); out("  About     Clock     GitHub    Shell");  out("  Workbench WOPR"); break;
     case "info":
@@ -529,9 +633,9 @@ function exec(raw) {
     case "date": out(amigaDate()); break;
     case "avail":
       out("Type  Available   In-Use  Maximum  Largest");
-      out(`chip  ${String(fm - 524288).padStart(9)} ${String(524288 * 2 - fm).padStart(8)}   524288 ${String(fm - 524288 - 9120).padStart(8)}`);
-      out(`fast  ${String(524288).padStart(9)} ${String(0).padStart(8)}   524288   524288`);
-      out(`total ${String(fm).padStart(9)} ${String(524288 * 2 - fm).padStart(8)}  1048576   524288`); break;
+      out(`chip  ${String(fm).padStart(9)} ${String(524288 - fm).padStart(8)}   524288 ${String(Math.max(0, fm - 11240)).padStart(8)}`);
+      out(`fast  ${String(0).padStart(9)} ${String(0).padStart(8)}        0        0`);
+      out(`total ${String(fm).padStart(9)} ${String(524288 - fm).padStart(8)}   524288 ${String(Math.max(0, fm - 11240)).padStart(8)}`); break;
     case "version": out("Kickstart version 34.5. Workbench version 34.34"); break;
     case "echo": out(arg.replace(/^"(.*)"$/, "$1")); break;
     case "type":
@@ -550,6 +654,12 @@ function exec(raw) {
     case "cls": case "clear": sh.lines = []; break;
     case "endcli": case "endshell": case "exit": { const w = wins.find(x => x.id === "shell"); if (w) closeWin(w); break; }
     case "guru": guru(); break;
+    case "reboot": reboot(); break;
+    case "virusx": openVirusX(); break;
+    case "sysinfo": openSysInfo(); break;
+    case "caves": startCaves(); break;
+    case "xcopy": case "x-copy": startXCopy(); break;
+    case "sound": muted = /^off$/i.test(arg); out("Sound " + (muted ? "off" : "on")); break;
     default: out("Unknown command " + c0);
   }
   if (sh.lines.length > 300) sh.lines.splice(0, sh.lines.length - 300);
@@ -641,12 +751,13 @@ function renderBoot() {
   fill(2 + rows[rows.length - 1].length * 8, 12 + (rows.length - 1) * 8, 8, 8, OR);
 }
 
-function guru() { mode = "guru"; menu = null; drag = null; kbd.blur(); dirty(); }
+let guruCode = "00000004.0000AAC0";
+function guru(code = "00000004.0000AAC0") { guruCode = code; mode = "guru"; menu = null; drag = null; kbd.blur(); dirty(); }
 function renderGuru() {
   fill(0, 0, LW, LH, "#000000");
   const narrow = LW < 480;
-  const L = narrow ? ["Software Failure.", "Press left mouse button to continue.", "Guru Meditation #00000004.0000AAC0"]
-                   : ["Software Failure.    Press left mouse button to continue.", "Guru Meditation #00000004.0000AAC0"];
+  const L = narrow ? ["Software Failure.", "Press left mouse button to continue.", "Guru Meditation #" + guruCode]
+                   : ["Software Failure.    Press left mouse button to continue.", "Guru Meditation #" + guruCode];
   const h = L.length * 12 + 18;
   if (Math.floor(Date.now() / 800) % 2 === 0) { fill(0, 0, LW, h, GURU); fill(8, 3, LW - 16, h - 6, "#000000"); }
   L.forEach((s, i) => text(s, (LW - s.length * 8) >> 1, 9 + i * 12, GURU));
@@ -656,6 +767,10 @@ function renderGuru() {
 function render() {
   if (mode === "guru") { renderGuru(); return; }
   if (mode === "boot") { renderBoot(); drawPointer(); return; }
+  if (mode === "sca") { renderSCA(); return; }
+  if (mode === "bbdark") { renderBBDark(); return; }
+  if (mode === "cave") { DC.draw(ctx, LW, LH, touchSeen); return; }
+  if (mode === "xcopy") { renderXCopy(); drawPointer(); return; }
 
   fill(0, 0, LW, LH, BL);
   const now = performance.now();
@@ -674,7 +789,9 @@ function render() {
 }
 function drawPointer() {
   if (!hasMouse || ptr.x < 0) return;
-  if (performance.now() < busyUntil) drawBusy(ptr.x, ptr.y); else drawSprite(POINTER, ptr.x, ptr.y);
+  if (performance.now() < busyUntil) drawBusy(ptr.x, ptr.y);
+  else if (mode === "xcopy") { const s = SPR; SPR = { r:"#2f6bff", k:"#001a66", w:"#9fc4ff" }; drawSprite(POINTER, ptr.x, ptr.y); SPR = s; }  // X-Copy's blue arrow
+  else drawSprite(POINTER, ptr.x, ptr.y);
 }
 let raf = 0;
 function dirty() { if (!raf) raf = requestAnimationFrame(() => { raf = 0; render(); }); }
@@ -746,8 +863,13 @@ cv.addEventListener("pointerdown", e => {
   const p = toL(e); ptr = p;
   if (e.pointerType === "mouse") { hasMouse = true; document.body.classList.add("mouse"); }
   e.preventDefault();
+  if (e.pointerType !== "mouse") touchSeen = true;
+  if (mode === "cave") { try { cv.setPointerCapture(e.pointerId); } catch (_) {} DC.pointer("down", p, e); return; }
+  if (mode === "sca") { endSCA(); return; }
+  if (mode === "bbdark") { bbClick(); return; }
   if (mode === "boot") { skipBoot(); return; }
-  if (mode === "guru") { if (e.button === 0) runBoot(); return; }
+  if (mode === "guru") { if (e.button === 0) reboot(); return; }
+  if (mode === "xcopy") { xcClick(p, e.button); return; }
   try { cv.setPointerCapture(e.pointerId); } catch (_) {}
 
   if (e.button === 2) { menu = { sticky:false, cur:-1, ii:-1 }; updMenu(p); dirty(); return; }
@@ -774,6 +896,10 @@ cv.addEventListener("pointerdown", e => {
       else if (part === "drag") drag = { k:"move", w, ox:p.x - w.x, oy:p.y - w.y, nx:w.x, ny:w.y };
       else if (part === "size") drag = { k:"size", w, ox:w.x + w.w - p.x, oy:w.y + w.h - p.y, nw:w.w, nh:w.h };
       else if (part === "content" && w.type === "drawer") { const c = content(w); iconDown(w.icons, p.x - c.x, p.y - c.y, w, p); }
+      else if (part === "content" && w.type === "panel") {
+        const b = panelLayout(w, content(w)).find(b => p.x >= b.x && p.x < b.x + b.w && p.y >= b.y && p.y < b.y + b.h);
+        if (b) { ac(); drag = { k:"btn", w, b }; }
+      }
       else deselectAll();
     }
   } else {
@@ -785,6 +911,7 @@ cv.addEventListener("pointerdown", e => {
 
 cv.addEventListener("pointermove", e => {
   const p = toL(e); ptr = p;
+  if (mode === "cave") { DC.pointer("move", p, e); return; }
   if (e.pointerType === "mouse" && !hasMouse) { hasMouse = true; document.body.classList.add("mouse"); }
   if (menu) updMenu(p);
   if (drag) {
@@ -802,11 +929,13 @@ cv.addEventListener("pointermove", e => {
 
 cv.addEventListener("pointerup", e => {
   const p = toL(e);
+  if (mode === "cave") { DC.pointer("up", p, e); return; }
   if (menu && !menu.sticky && e.button === 2) { runMenu(); menu = null; }
   if (drag) {
     const w = drag.w;
     if (drag.k === "move") { w.x = drag.nx; w.y = drag.ny; }
     else if (drag.k === "size") { w.w = drag.nw; w.h = drag.nh; }
+    else if (drag.k === "btn") { const b = drag.b; if (p.x >= b.x && p.x < b.x + b.w && p.y >= b.y && p.y < b.y + b.h) b.act(); }
     else if (drag.k === "close") { if (winAt(p) === w && hitPart(w, p.x, p.y) === "close") closeWin(w); }
     else if (drag.k === "icon" && drag.moved) {
       const ic = drag.ic;
@@ -831,7 +960,13 @@ function shellKey(e) {
   else return false;
   dirty(); return true;
 }
-kbd.addEventListener("keydown", e => { if (shellKey(e)) e.preventDefault(); });
+function modeKey(e) {
+  if (mode === "cave") { DC.key(e, true); return true; }
+  if (mode === "bbdark") { if (e.altKey && (e.key === " " || e.code === "Space")) bbWake(); e.preventDefault(); return true; }
+  if (mode === "xcopy" && (e.key === "Escape" || e.key === "q")) { XC.abort = true; mode = "wb"; dirty(); return true; }
+  return false;
+}
+kbd.addEventListener("keydown", e => { if (mode === "bbdark") { modeKey(e); return; } if (shellKey(e)) e.preventDefault(); });
 kbd.addEventListener("input", () => {
   const v = kbd.value; kbd.value = "";
   if (!shellActive()) return;
@@ -841,12 +976,814 @@ kbd.addEventListener("input", () => {
   }
   dirty();
 });
+addEventListener("keyup", e => { if (mode === "cave") DC.key(e, false); });
 addEventListener("keydown", e => {
-  if (e.target === kbd || !shellActive()) return;
+  if (e.target !== kbd && modeKey(e)) return;
+  if (e.target === kbd || !shellActive() || mode !== "wb") return;
   if (shellKey(e)) { e.preventDefault(); }
   else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) { sh.inp += e.key; e.preventDefault(); dirty(); }
   kbd.focus({ preventScroll:true });
 });
+
+/* ====================================================================== */
+/*  Extras: sound, SCA virus, VirusX, requesters,                          */
+/*  X-Copy                                                                 */
+/* ====================================================================== */
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const ANIM = new Set(["sca", "xcopy", "bbdark", "cave"]);
+let animOn = false;
+function anim() {
+  if (animOn) return;
+  animOn = true;
+  const loop = () => { if (!ANIM.has(mode)) { animOn = false; dirty(); return; } render(); requestAnimationFrame(loop); };
+  requestAnimationFrame(loop);
+}
+function bigText(s, x, y, col, sx, sy) {
+  const a = atlas(col);
+  for (let i = 0; i < s.length; i++) ctx.drawImage(a, gi(s[i]) * 8, 0, 8, 8, x + i * 8 * sx, y, 8 * sx, 8 * sy);
+}
+
+/* ---------- sound (WebAudio, only ever started by a click) ------------- */
+let actx = null, muted = false, NB = null;
+function ac() {
+  if (muted) return null;
+  try { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) { return null; }
+  if (actx.state === "suspended") actx.resume();
+  return actx;
+}
+function noise(a, when, dur, vol, type, freq, q) {
+  if (!NB) { NB = a.createBuffer(1, a.sampleRate, a.sampleRate); const d = NB.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+  const s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+  s.buffer = NB; f.type = type; f.frequency.value = freq; f.Q.value = q || 1;
+  g.gain.setValueAtTime(vol, when); g.gain.exponentialRampToValueAtTime(.0001, when + dur);
+  s.connect(f); f.connect(g); g.connect(a.destination);
+  s.start(when, Math.random() * .5); s.stop(when + dur + .02);
+}
+function tone(a, when, dur, freq, vol, type, dest) {
+  const o = a.createOscillator(), g = a.createGain();
+  o.type = type || "square"; o.frequency.setValueAtTime(freq, when);
+  g.gain.setValueAtTime(vol, when); g.gain.exponentialRampToValueAtTime(.0001, when + dur);
+  o.connect(g); g.connect(dest || a.destination); o.start(when); o.stop(when + dur + .02);
+  return o;
+}
+function snd(kind) {
+  const a = ac(); if (!a) return;
+  const t = a.currentTime;
+  if (kind === "step")   noise(a, t, .018, .35, "highpass", 1800);
+  if (kind === "grind")  { noise(a, t, .07, .16, "bandpass", 320, 3); tone(a, t, .07, 55, .03, "sawtooth"); }
+  if (kind === "insert") { for (let i = 0; i < 4; i++) noise(a, t + i * .09, .02, .35, "highpass", 1600); noise(a, t + .4, .35, .12, "bandpass", 260, 2); }
+  if (kind === "err")    { tone(a, t, .12, 196, .05); tone(a, t + .14, .2, 147, .05); }
+}
+
+
+ICON.xcopy = makeIcon(36, 16, g => {
+  for (const x of [0, 22]) { g.rect(x, 2, 14, 13, 1); g.frame(x, 2, 14, 13, 2); g.rect(x + 4, 2, 6, 4, 3); g.rect(x + 3, 9, 8, 1, 0); g.rect(x + 3, 11, 8, 1, 0); }
+  g.rect(15, 8, 5, 1, 2); g.line(18, 6, 20, 8, 2); g.line(18, 10, 20, 8, 2);
+});
+ICON.virusx = makeIcon(30, 20, g => {
+  g.ell(11, 8, 10, 7, 1, 2);
+  g.rect(8, 6, 6, 4, 3); g.px(7, 5, 2); g.px(14, 5, 2); g.px(7, 10, 2); g.px(14, 10, 2); g.rect(10, 7, 2, 1, 2);
+  g.line(18, 13, 28, 19, 2); g.line(19, 13, 29, 19, 2); g.line(18, 14, 27, 19, 2);
+});
+ICON.sca = makeIcon(30, 20, g => {           // a bootblock bug
+  g.ell(15, 11, 8, 6, 3, 2); g.ell(15, 4, 5, 3, 2, 2);
+  g.line(15, 6, 15, 16, 2); g.rect(11, 9, 2, 1, 2); g.rect(18, 12, 2, 1, 2);
+  for (const y of [7, 11, 15]) { g.line(7, y, 2, y - 2, 2); g.line(23, y, 28, y - 2, 2); }
+  g.line(12, 2, 9, 0, 2); g.line(18, 2, 21, 0, 2);
+});
+
+/* ---------- reboot & SCA virus (1987) — harmless re-enactment --------- */
+ICON.sysinfo = makeIcon(32, 18, g => {        // a 68000 in its DIP package
+  g.rect(0, 0, 32, 18, 4);
+  for (let x = 3; x < 30; x += 3) { g.rect(x, 1, 1, 3, 1); g.rect(x, 14, 1, 3, 1); }
+  g.rect(1, 4, 30, 10, 2); g.rect(2, 4, 28, 1, 1); g.px(3, 6, 3); g.px(4, 6, 3);
+  g.txt("68K", 5, 5, 3);
+});
+ICON.bandit = makeIcon(30, 20, g => {          // Byte Bandit: a masked bootblock thief
+  g.rect(0, 0, 30, 20, 4);
+  g.ell(15, 11, 12, 8, 1, 2);
+  g.rect(3, 7, 24, 4, 2); g.rect(8, 8, 4, 2, 1); g.rect(18, 8, 4, 2, 1);
+  g.rect(12, 15, 6, 1, 2); g.rect(5, 2, 20, 3, 2); g.rect(9, 0, 12, 2, 2); g.rect(9, 3, 12, 1, 3);
+});
+
+/* ---------- SysInfo: an A500 next to the visitor's machine (nothing leaves the browser) */
+function bench() {
+  const t0 = performance.now(); let n = 0, x = 1;
+  while (performance.now() - t0 < 40 && n < 4e7) { for (let i = 0; i < 20000; i++) x = (x * 1103515245 + 12345) | 0; n += 20000; }
+  const el = performance.now() - t0;
+  return { ipm: el >= 5 ? n / el : 0, x };              // 0 = could not measure
+}
+function openSysInfo() {
+  const cores = navigator.hardwareConcurrency || "?", ram = navigator.deviceMemory ? navigator.deviceMemory + " GB" : "lots";
+  const mips = Math.round(bench().ipm * 4 / 1000), factor = Math.max(1, Math.round(mips / 0.7)), ok = mips > 0;
+  const pad = (s, n) => (s + " ".repeat(n)).slice(0, n);
+  const row = (l, a, y) => pad(l, 8) + pad(a, 13) + y;
+  const lines = [
+    [row("", "AMIGA 500", "YOU"), OR],
+    row("CPU", "68000 7MHz", cores + " cores"),
+    row("RAM", "512K chip", ram),
+    row("Screen", "640x256", screen.width + "x" + screen.height),
+    row("Colours", "4 of 4096", "16.7 M"),
+    row("Speed", "0.7 MIPS", ok ? "~" + nfmt(mips) + " MIPS" : "too fast"),
+    "",
+    [ok ? "= " + nfmt(factor) + " x an A500" : "= off the scale", OR],
+    "(estimated, just for fun)"
+  ];
+  const s = panelSize(lines, 1);
+  const w = openWin({ id:"sysinfo", title:"SysInfo", type:"panel", mem:10240, lines, x:70 + cascade(), y:30 + cascade(), w:s.w, h:s.h,
+    buttons:[["OK", () => closeWin(w)]] });
+}
+
+/* ---------- "Not enough memory" — and a guru if you insist */
+let memFails = 0;
+function noMem(name) {
+  memFails++;
+  snd("err");
+  if (memFails >= 3) { memFails = 0; guru("81000005.0000C0DE"); return; }
+  const old = wins.find(x => x.id === "nomem"); if (old) closeWin(old);
+  const lines = ["Unable to open", "'" + name + "'", "", ["Not enough memory.", OR]], s = panelSize(lines, 1);
+  const w = openWin({ id:"nomem", title:"System Request", type:"panel", noMemCheck:true, mem:0, lines,
+    x:(LW - Math.max(s.w, 200)) >> 1, y:(LH - s.h) >> 2, w:Math.max(s.w, 200), h:s.h, buttons:[["OK", () => closeWin(w)]] });
+}
+
+/* ---------- Byte Bandit (1988): stays resident; after a while the screen goes dark and
+   the keyboard seems dead. Only a key combination wakes it up — the virus stays active. */
+let bandit = false, bbCopies = 0, bbTimer = 0, bbClicks = [];
+const BB_FIRST = 6000, BB_AGAIN = 30000;      // the original waited about 7 minutes — nobody would notice
+function startBB() {
+  busy(900); snd("insert");
+  setTimeout(() => { bandit = true; bbCopies++; reboot(); bbArm(BB_FIRST); }, 700);
+}
+let bbT = 0;
+function bbArm(ms = BB_AGAIN) { clearTimeout(bbTimer); if (bandit) bbTimer = setTimeout(bbDark, ms); }
+function bbDark() {
+  if (!bandit) return;
+  if (mode !== "wb") { bbTimer = setTimeout(bbDark, 1000); return; }   // wait until the Workbench is up
+  mode = "bbdark"; bbT = performance.now(); menu = null; drag = null; kbd.blur(); bbClicks = []; anim();
+}
+function renderBBDark() {
+  const e = performance.now() - bbT, a = clamp(e / 1800, 0, 1);
+  if (a < 1) { mode = "wb"; render(); mode = "bbdark"; ctx.fillStyle = `rgba(0,0,0,${a})`; ctx.fillRect(0, 0, LW, LH); return; }
+  fill(0, 0, LW, LH, "#000000");
+  const tv = clamp((e - 2600) / 1500, 0, 1), g = Math.round(tv * 7) * 12;     // the bootblock string glows up faintly
+  if (g > 0) {
+    const L = ["Virus by Byte Bandit in 9.87.", "Number of copys : " + bbCopies];
+    L.forEach((s, i) => text(s, (LW - s.length * 8) >> 1, (LH >> 1) - 14 + i * 12, `rgb(${g},${g},${g})`));
+  }
+  if (e > 6500) {
+    const h = LW >= 480 ? "LEFT-ALT + LEFT-AMIGA + SPACE + RIGHT-AMIGA + RIGHT-ALT" : "L-ALT+L-AMIGA+SPACE+R-AMIGA+R-ALT";
+    text(h, (LW - h.length * 8) >> 1, LH - 30, "#3a3a3a");
+    const h2 = "(here: Alt+Space, or click three times)";
+    text(h2, (LW - h2.length * 8) >> 1, LH - 18, "#2e2e2e");
+  }
+}
+function bbWake() { if (mode !== "bbdark") return; mode = "wb"; dirty(); bbArm(); }
+function bbClick() {                          // touch / mouse stand-in for the key combination: three quick clicks
+  const now = performance.now();
+  bbClicks = bbClicks.filter(t => now - t < 1500); bbClicks.push(now);
+  if (bbClicks.length >= 3) bbWake();
+}
+
+let infected = false, scaT = 0, scaTimer = 0;
+function reboot() { xcStop(); kbd.blur(); df1Reset(); runBoot(); }
+function startSCA() {                         // only on double-click of the "SCA-Virus" icon
+  busy(900); snd("insert");
+  setTimeout(() => {
+    infected = true; wins = []; active = null; menu = null; drag = null; titleMsg = null; xcStop(); kbd.blur();
+    mode = "sca"; scaT = performance.now(); clearTimeout(scaTimer); scaTimer = setTimeout(endSCA, 12000); anim();
+  }, 700);
+}
+const SCA_TXT = [
+  "Something wonderful has happened",
+  "Your AMIGA is alive !!!",
+  "and, even better...",
+  "Some of your disks are infected by a VIRUS !!!",
+  "Another masterpiece of The Mega-Mighty SCA !!"
+];
+function renderSCA() {
+  fill(0, 0, LW, LH, "#000000");
+  const t = performance.now() - scaT, y0 = (LH - SCA_TXT.length * 14) >> 1;
+  SCA_TXT.forEach((s, i) => {
+    let a = clamp((t - 400 - i * 1100) / 700, 0, 1);
+    if (t > 7800) a *= .55 + .45 * Math.cos((t - 7800) / 380);  // pieces fade in and out
+    const v = Math.round(a * 7) * 36;
+    if (v > 0) text(s, (LW - s.length * 8) >> 1, y0 + i * 14, `rgb(${v},${v},${v})`);
+  });
+}
+function endSCA() { if (mode !== "sca") return; clearTimeout(scaTimer); runBoot(); }
+
+/* ---------- requester-style panels ------------------------------------ */
+function panelLayout(w, c) {
+  const B = (w.getButtons ? w.getButtons() : w.buttons) || [];
+  const by = c.y + c.h - 14, out = [];
+  B.forEach((b, i) => {
+    const bw = b[0].length * 8 + 16;
+    let bx = c.x + 6;
+    if (B.length === 1) bx = c.x + ((c.w - bw) >> 1);
+    else if (i === B.length - 1) bx = c.x + c.w - bw - 24;
+    else if (i > 0) bx = c.x + Math.round(i * (c.w - bw) / (B.length - 1));
+    out.push({ x:bx, y:by, w:bw, h:11, label:b[0], act:b[1] });
+  });
+  return out;
+}
+function drawPanel(w, c) {
+  const L = w.getLines ? w.getLines() : w.lines;
+  L.forEach((l, i) => { const [s, col] = Array.isArray(l) ? l : [l, WH]; text(s, c.x + 6, c.y + 4 + i * 9, col); });
+  panelLayout(w, c).forEach(b => {
+    frame(b.x, b.y, b.w, b.h, WH); frame(b.x - 1, b.y - 1, b.w + 2, b.h + 2, BK);
+    text(b.label, b.x + 8, b.y + 2, WH);
+    if (drag && drag.k === "btn" && drag.w === w && drag.b.label === b.label) comp(b.x, b.y, b.w, b.h);
+  });
+}
+function panelSize(lines, nbtn) { return { w: Math.max(...lines.map(l => (Array.isArray(l) ? l[0] : l).length)) * 8 + 24, h: lines.length * 9 + 8 + (nbtn ? 18 : 0) + 13 }; }
+
+function openNDOS() {
+  const lines = ["Not a DOS disk", "in device DF1:"];
+  const s = panelSize(lines, 2);
+  const w = openWin({ id:"ndos", title:"System Request", type:"panel", mem:2048, lines,
+    x:(LW - Math.max(s.w, 200)) >> 1, y:(LH - s.h) >> 2, w:Math.max(s.w, 200), h:s.h,
+    buttons:[["Retry", () => { snd("insert"); busy(900); }], ["Cancel", () => closeWin(w)]] });
+  snd("step");
+}
+
+/* ---------- VirusX ------------------------------------------------------ */
+const VX = { st:"scan" };
+function openVirusX() {
+  VX.st = "scan";
+  const w = openWin({ id:"virusx", title:"VirusX", type:"panel", mem:8192, x:40 + cascade(), y:40 + cascade(), w:250, h:80,
+    getLines: () => {
+      if (VX.st === "scan") return ["Checking bootblocks " + ".".repeat(1 + (Math.floor(performance.now() / 250) % 4)), "", "DF0: faf.net", "DF1: ..."];
+      if (VX.st === "clean") return ["DF0: bootblock is clean.", "DF1: not a DOS disk.", "", ["No viruses found.", OR]];
+      if (VX.st === "infected") return infected
+        ? [["DF0: SCA VIRUS FOUND!", OR], "", "The bootblock of DF0:", "is infected. Remove it?"]
+        : [["DF0: BYTE BANDIT FOUND!", OR], "'Virus by Byte Bandit", " in 9.87. Number of", " copys : " + bbCopies + "'"];
+      return ["DF0: bootblock rewritten.", "", ["SCA virus removed.", OR], "Masterpiece undone."];
+    },
+    getButtons: () => VX.st === "scan" ? [] : VX.st === "infected"
+      ? [["Remove", () => { infected = false; bandit = false; clearTimeout(bbTimer); VX.st = "removed"; snd("insert"); busy(700); }], ["Cancel", () => closeWin(w)]]
+      : [["OK", () => closeWin(w)]] });
+  snd("step");
+  setTimeout(() => { if (VX.st === "scan") { VX.st = infected || bandit ? "infected" : "clean"; if (infected || bandit) snd("err"); dirty(); } }, 1600);
+}
+
+/* ---------- DF1: ------------------------------------------------------- */
+const df1 = mkIcon("DF1:NDOS", "disk", () => openNDOS());
+deskIcons.splice(2, 0, df1);              // faf.net · RAM DISK · DF1: · WOPR
+function df1Copied() { df1.label = "faf.net"; df1.lw = 56; df1.img = "sysdisk"; df1.act = () => openDisk("df1"); }
+function df1Reset()  { df1.label = "DF1:NDOS"; df1.lw = 64; df1.img = "disk"; df1.act = () => openNDOS(); }
+
+/* ---------- X-Copy ------------------------------------------------------ */
+// Homage to X-Copy (© 1988 Cachet — F. Neuhaus & H.C. Berg), drawn on its own
+// 640×200 "screen" and scaled onto the Workbench canvas. Original colours, always.
+const XCV = document.createElement("canvas"); XCV.width = 640; XCV.height = 200;
+const X = XCV.getContext("2d"); X.imageSmoothingEnabled = false;
+const XMODES = ["DOSCOPY+", "BAMCOPY+", "NIBBLE", "CHECK", "FORMAT", "ERASE"];
+const XC = { cells:new Uint8Array(160), busy:false, abort:false, mode:0, start:0, end:79, src:0, tgt:1,
+             status:"", T:{ ox:0, oy:0, f:1 } };
+const XG = { up:[279, 104], lo:[467, 104] };            // grid origins
+const XDRV = [14, 77, 139, 202];                        // drive x positions
+let XLOGO = null;
+
+function xf(x, y, w, h, c) { X.fillStyle = c; X.fillRect(x, y, w, h); }
+function xt(s, x, y, c, sx = 1, sy = 1, bold = true) {
+  const a = atlas(c);
+  for (let i = 0; i < s.length; i++) {
+    const g = gi(s[i]) * 8;
+    X.drawImage(a, g, 0, 8, 8, x + i * 8 * sx, y, 8 * sx, 8 * sy);
+    if (bold) X.drawImage(a, g, 0, 8, 8, x + i * 8 * sx + 1, y, 8 * sx, 8 * sy);
+  }
+}
+function xrivet(cx, cy) {
+  xf(cx - 3, cy - 2, 6, 4, "#8a8a8a"); xf(cx - 4, cy - 1, 8, 2, "#8a8a8a");
+  xf(cx - 2, cy - 2, 2, 1, "#f0f0f0"); xf(cx - 3, cy - 1, 1, 1, "#d0d0d0"); xf(cx + 1, cy + 1, 3, 1, "#2a2a2a");
+}
+function xbevel(x, y, w, h) {
+  xf(x, y, w, 1, "#e0e0e0"); xf(x, y, 2, h, "#e0e0e0");
+  xf(x, y + h - 1, w, 1, "#505050"); xf(x + w - 2, y, 2, h, "#505050");
+}
+function xrivetPanel(x, y, w, h) {
+  xf(x, y, w, h, "#000000"); xbevel(x, y, w, h);
+  for (let cx = x + 8; cx <= x + w - 8; cx += 15) { xrivet(cx, y + 4); xrivet(cx, y + h - 5); }
+  for (let cy = y + 12; cy <= y + h - 12; cy += 8) { xrivet(x + 8, cy); xrivet(x + w - 9, cy); }
+}
+function xlamp(x, y) { xf(x, y, 6, 4, "#cc5500"); xf(x + 1, y, 4, 4, "#ff8800"); xf(x + 2, y + 1, 2, 1, "#ffee88"); }
+function xarrow(cx, y, up) {
+  const r = up ? [0, 1, 2] : [2, 1, 0];
+  r.forEach((k, i) => { xf(cx - 1 - k * 2, y + i, 2 + k * 4, 1, i === (up ? 0 : 2) ? "#99bbff" : "#2f6bff"); });
+}
+function xbulb(cx, cy, glass, hi, letter) {
+  for (let d = -4; d <= 4; d++) { const hw = Math.round(6 * Math.sqrt(1 - (d * d) / 25)); xf(cx - hw, cy + d, hw * 2, 1, glass); }
+  xf(cx - 3, cy - 3, 2, 1, hi); xf(cx - 4, cy - 2, 2, 1, hi);
+  xf(cx - 3, cy + 5, 6, 4, "#8c8c8c"); xf(cx - 3, cy + 6, 6, 1, "#444"); xf(cx - 3, cy + 8, 6, 1, "#444"); xf(cx - 1, cy + 9, 2, 1, "#666");
+  if (letter) xt(letter, cx - 4, cy - 4, "#3a1a00", 1, 1, false);
+}
+function xdrive(x, y, n) {
+  xf(x, y + 1, 50, 25, "#2347d8"); xf(x, y + 1, 50, 1, "#5f83ff"); xf(x, y + 25, 50, 1, "#0d1f7a"); xf(x + 49, y + 1, 1, 25, "#0d1f7a");
+  xf(x + 4, y, 42, 2, "#3fcf3f");
+  xf(x + 4, y + 2, 42, 16, "#d8d8d8"); xf(x + 4, y + 17, 42, 1, "#9a9a9a");
+  xt("DRIVE", x + 5, y + 2, "#5a5a6a", 1, 1, false); xt(String(n), x + 21, y + 10, "#5a5a6a", 1, 1, false);
+  xf(x + 12, y + 19, 26, 6, "#e8e8e8"); xf(x + 12, y + 24, 26, 1, "#7a7a7a");
+  for (let i = 0; i < 6; i++) xf(x + 22 + i * 2, y + 24 - i, 2, 1, "#9a9a9a");
+  xf(x + 15, y + 20, 3, 4, "#2347d8"); xf(x + 46, y + 22, 3, 3, "#000");
+}
+function xlogo() {
+  if (XLOGO) return XLOGO;
+  const sx = 7, sy = 4, w = 6 * 8 * sx, h = 8 * sy, mk = () => { const c = document.createElement("canvas"); c.width = w + 4; c.height = h + 4; const g = c.getContext("2d"); g.imageSmoothingEnabled = false; return [c, g]; };
+  const a = atlas("#ffffff");
+  const [m, mg] = mk();
+  for (let i = 0; i < 6; i++) mg.drawImage(a, gi("X-COPY"[i]) * 8, 0, 8, 8, 2 + i * 8 * sx, 2, 8 * sx, 8 * sy);
+  const tint = (fillFn) => { const [c, g] = mk(); g.drawImage(m, 0, 0); g.globalCompositeOperation = "source-in"; fillFn(g); g.fillRect(0, 0, c.width, c.height); return c; };
+  const black = tint(g => { g.fillStyle = "#000"; });
+  const dark = tint(g => { g.fillStyle = "#3a3a3a"; });
+  const chrome = tint(g => { const gr = g.createLinearGradient(0, 2, 0, h + 2);
+    [[0, "#ffffff"], [.3, "#d4d4d4"], [.48, "#7a7a7a"], [.52, "#4a4a4a"], [.62, "#a8a8a8"], [1, "#efefef"]].forEach(([o, c]) => gr.addColorStop(o, c)); g.fillStyle = gr; });
+  const [o, og] = mk();
+  for (const [dx, dy] of [[-2, 0], [2, 0], [0, -1], [0, 1], [-2, -1], [2, 1]]) og.drawImage(black, dx, dy);
+  og.drawImage(dark, 2, 1); og.drawImage(chrome, 0, 0);
+  return (XLOGO = o);
+}
+function xgrid(x0, y0, title) {
+  xt(title, x0 + 80 - title.length * 4, 84, "#c8c8c8");
+  for (let c = 0; c < 10; c++) xt(String(c), x0 + c * 16 + 4, 95, "#d8d8d8", 1, 1, false);
+  for (let r = 0; r < 9; r++) xt(String(r), x0 - 11, y0 + r * 8, "#d8d8d8", 1, 1, false);
+  for (let c = 0; c <= 10; c++) xf(x0 + c * 16, y0, 1, 72, c ? "#bdbdbd" : "#ffffff");
+  for (let r = 0; r <= 9; r++) xf(x0, y0 + r * 8, 161, 1, r ? "#bdbdbd" : "#ffffff");
+}
+function xcell(side, t, st) {
+  const [x0, y0] = side ? XG.lo : XG.up, x = x0 + (t % 10) * 16 + 2, y = y0 + Math.floor(t / 10) * 8 + 2;
+  const C = [null, "#ffee33", "#ff8a00", "#2fd12f", "#e02020", "#5a5a5a"][st];
+  if (!C) return;
+  xf(x, y, 13, 5, C);
+  if (st === 4) xt("2", x + 3, y - 2, "#ffffff", 1, 1, false);
+}
+
+function renderXCopyScreen() {
+  xf(0, 0, 640, 200, "#000000");
+  // header: rivet panels, chrome logo, plaque
+  xrivetPanel(6, 1, 131, 42);
+  xt("© 1988 by", 20, 13, "#d8d8d8"); xt("CACHET", 36, 25, "#d8d8d8", 1, 1);
+  xf(138, 1, 364, 42, "#000000"); xbevel(138, 1, 364, 42);
+  for (let y = 4; y < 42; y += 3) for (let x = 141 + (y % 2) * 2; x < 500; x += 4) xf(x, y, 1, 1, "#4a4a4a");
+  X.drawImage(xlogo(), 150, 2);
+  for (const [x, y] of [[176, 7], [240, 21], [300, 9], [355, 28], [410, 8], [468, 22]]) xrivet(x, y);
+  xf(208, 34, 212, 11, "#3a2410"); xbevel(208, 34, 212, 11);
+  const pl = "FAF.NET EDITION"; xt(pl, 314 - pl.length * 4, 36, "#ffaa22");
+  xrivetPanel(504, 1, 131, 42);
+  xt("F.NEUHAUS", 534, 13, "#d8d8d8"); xt("& H.C.BERG", 530, 25, "#d8d8d8");
+  // parameter panel
+  xbevel(6, 45, 629, 35);
+  xf(9, 47, 37, 31, "#000"); xbevel(9, 47, 37, 31);
+  const go = !XC.busy;
+  xlamp(13, 49); xlamp(13, 72);
+  ["S", "T", "O", "P"].forEach((ch, i) => xt(ch, 29, 47 + i * 8, go ? "#7a2a00" : "#ff5a1a"));
+  ["G", "O"].forEach((ch, i) => xt(ch, 13, 55 + i * 8, go ? "#33dd33" : "#145514"));
+  [[57, "MODE", 69], [125, "DEF", 136], [178, "LIST", 191], [0, "START", 238], [0, "END", 316], [366, "NAME", 377], [431, "SIDE", 442], [492, "SYNC", 505], [0, "LENGTH", 559]]
+    .forEach(([lx, s, x]) => { if (lx) xlamp(lx, 51); xt(s, x, 49, "#c8c8c8"); });
+  xf(52, 58, 580, 1, "#2f6bff");
+  const vals = [[XMODES[XC.mode], 53, false], [p2(XC.start), 229, true], ["0", 278, true], [p2(XC.end), 315, true], ["1", 364, true], ["BOTH", 390, false], ["4489", 485, true], ["1860", 562, true]];
+  vals.forEach(([s, x, arrows]) => {
+    xt(s, x, 65, "#33cc33", 2, 1);
+    if (arrows) for (let i = 0; i < s.length; i++) { xarrow(x + i * 16 + 8, 60, true); xarrow(x + i * 16 + 8, 74, false); }
+  });
+  // drives
+  xt("SOURCE DRIVE", 80, 84, "#c8c8c8");
+  xf(6, 93, 628, 1, "#2f6bff");
+  xbulb(XDRV[XC.src] + 25, 109, "#b8b8b8", "#ffffff");
+  XDRV.forEach((x, i) => xdrive(x, 121, i));
+  xbulb(XDRV[XC.tgt] + 25, 154, "#ff9a00", "#ffe066", "V");
+  xf(6, 166, 255, 1, "#2f6bff");
+  xt("TARGET DRIVES", 80, 170, "#c8c8c8");
+  // grids
+  xgrid(XG.up[0], XG.up[1], "UPPER SIDE"); xgrid(XG.lo[0], XG.lo[1], "LOWER SIDE");
+  for (let s = 0; s < 2; s++) for (let t = 0; t < 80; t++) xcell(s, t, XC.cells[s * 80 + t]);
+  xt("RELEASE V1.2 / 01/10/88", 446, 178, "#2a8a2a", 1, 1, false);
+  // status bar
+  xbevel(6, 187, 629, 13); xf(8, 188, 625, 11, "#000");
+  xt(XC.status, 14, 190, "#ffffff", 1, 1, false);
+}
+function renderXCopy() {
+  renderXCopyScreen();
+  fill(0, 0, LW, LH, "#000000");
+  let f = Math.min(LW / 640, LH / 200); if (f >= 1) f = Math.floor(f);
+  const w = Math.round(640 * f), h = Math.round(200 * f), ox = (LW - w) >> 1, oy = (LH - h) >> 1;
+  XC.T = { ox, oy, f };
+  ctx.imageSmoothingEnabled = f < 1;
+  ctx.drawImage(XCV, 0, 0, 640, 200, ox, oy, w, h);
+  ctx.imageSmoothingEnabled = false;
+}
+function startXCopy() {
+  if (freeMem() < 131072) { noMem("X-Copy"); return; }
+  mode = "xcopy"; XC.cells.fill(0); kbd.blur();
+  XC.status = "X-COPY READY.   CLICK GO TO START  -  CLICK THE LOGO TO QUIT";
+  anim();
+}
+function xcStop() { XC.abort = true; }
+async function xcRun() {
+  if (XC.busy) return;
+  const m = XMODES[XC.mode], reads = m !== "FORMAT" && m !== "ERASE", writes = m !== "CHECK";
+  if (writes && XC.tgt > 1) { XC.status = "DRIVE " + XC.tgt + " NOT CONNECTED"; snd("err"); return; }
+  if (reads && XC.src > 1) { XC.status = "DRIVE " + XC.src + " NOT CONNECTED"; snd("err"); return; }
+  if (writes && reads && XC.src === XC.tgt) { XC.status = "SOURCE AND TARGET MUST DIFFER"; snd("err"); return; }
+  XC.busy = true; XC.abort = false; XC.cells.fill(0);
+  let errors = 0;
+  const bad = reads && m !== "NIBBLE" && Math.random() < .6 ? XC.start + Math.floor(Math.random() * (XC.end - XC.start + 1)) : -1;
+  const d = reduce ? 0 : m === "BAMCOPY+" ? 22 : 38;
+  for (let t = XC.start; t <= XC.end && !XC.abort; t++) {
+    snd("step");
+    for (let s = 0; s < 2 && !XC.abort; s++) {
+      const i = s * 80 + t;
+      if (m === "BAMCOPY+" && t > 40 && Math.random() < .5) { XC.cells[i] = 5; continue; }     // unused per BAM
+      if (reads) {
+        XC.cells[i] = 1; XC.status = `READING TRACK ${p2(t)}  SIDE ${s}`; snd("grind"); await sleep(d);
+        if (t === bad && s === 1) { XC.cells[i] = 4; errors++; XC.status = `TRACK ${p2(t)} SIDE ${s}: ERROR 2 - NO SYNC FOUND`; snd("err"); await sleep(reduce ? 0 : 700); continue; }
+      }
+      if (writes) { XC.cells[i] = 2; XC.status = `${m === "FORMAT" ? "FORMATTING" : m === "ERASE" ? "ERASING" : "WRITING"} TRACK ${p2(t)}  SIDE ${s}`; snd("grind"); await sleep(d); }
+      XC.cells[i] = 3;
+    }
+  }
+  XC.busy = false;
+  if (XC.abort) { XC.status = "STOPPED."; return; }
+  XC.status = `${m} COMPLETE.  ${errors} ERROR${errors === 1 ? "" : "S"}.`;
+  if (XC.tgt === 1 && writes && XC.start === 0 && XC.end === 79) {
+    if (m === "ERASE") df1Reset();
+    else if (m === "FORMAT") { df1.label = "Empty"; df1.lw = 40; df1.img = "disk"; df1.act = () => openWin({ id:"df1e", title:"Empty", type:"drawer", gauge:true, fill:.01, mem:8192, x:80, y:60, w:210, h:70 }); }
+    else if (XC.src === 0) df1Copied();
+  }
+}
+function xcClick(p, btn) {
+  if (btn === 2) { XC.abort = true; mode = "wb"; dirty(); return; }
+  const { ox, oy, f } = XC.T, x = (p.x - ox) / f, y = (p.y - oy) / f;
+  const inR = (x0, y0, w, h) => x >= x0 && x < x0 + w && y >= y0 && y < y0 + h;
+  ac();
+  if (inR(138, 1, 364, 33)) { XC.abort = true; mode = "wb"; dirty(); return; }            // logo = quit
+  if (inR(9, 47, 37, 31)) { if (XC.busy) XC.abort = true; else xcRun(); return; }          // STOP / GO
+  if (XC.busy) return;
+  if (inR(53, 59, 128, 20)) { XC.mode = (XC.mode + 1) % XMODES.length; XC.cells.fill(0); XC.status = "MODE: " + XMODES[XC.mode]; return; }
+  for (const [key, x0] of [["start", 229], ["end", 315]]) for (let k = 0; k < 2; k++) {
+    const step = k ? 1 : 10, cx = x0 + k * 16;
+    if (inR(cx, 58, 16, 6) || inR(cx, 73, 16, 6)) {
+      const up = y < 66;
+      XC[key] = clamp(XC[key] + (up ? step : -step), 0, 79);
+      if (XC.start > XC.end) { if (key === "start") XC.end = XC.start; else XC.start = XC.end; }
+      XC.status = `START ${p2(XC.start)}   END ${p2(XC.end)}`; snd("step"); return;
+    }
+  }
+  for (let i = 0; i < 4; i++) {
+    if (inR(XDRV[i], 101, 50, 19)) { if (i > 1) { XC.status = "DRIVE " + i + " NOT CONNECTED"; snd("err"); } else { XC.src = i; XC.status = "SOURCE: DF" + i + ":"; } return; }
+    if (inR(XDRV[i], 120, 50, 46)) { if (i > 1) { XC.status = "DRIVE " + i + " NOT CONNECTED"; snd("err"); } else { XC.tgt = i; XC.status = "TARGET: DF" + i + ":"; } return; }
+  }
+}
+
+
+/* ---------- DIAMOND CAVES — a cave game in the spirit of Boulder Dash (1984).
+   Own graphics, own generated caves, own sounds. 320×200 lowres screen, 40×22 tiles. */
+ICON.caves = makeIcon(32, 20, g => {
+  g.rect(0, 0, 32, 20, 4);
+  g.ell(9, 13, 8, 5, 1, 2); g.rect(4, 15, 9, 2, 2); g.px(6, 10, 0); g.px(7, 10, 0);
+  g.poly([[22,2],[29,9],[22,18],[15,9]], 1, 2); g.line(15, 9, 29, 9, 2); g.line(22, 2, 19, 9, 0); g.line(22, 2, 25, 9, 0);
+  g.px(22, 5, 3); g.px(21, 12, 3);
+});
+const DC = (() => {
+  const W = 40, H = 22, OY = 24;
+  const SCR = document.createElement("canvas"); SCR.width = 320; SCR.height = 200;
+  const g = SCR.getContext("2d"); g.imageSmoothingEnabled = false;
+  const T = { SP:0, DIRT:1, WALL:2, STEEL:3, ROCK:4, GEM:5, MAN:6, EXIT:7, FLY:8, BFLY:9, XS:10, XD:15 };
+  const C = { b:"#8a5a2b", d:"#5a3a1a", r:"#a8432f", m:"#3c3c3c", w:"#ffffff", g:"#9a9a9a", k:"#4e4e4e", c:"#55d8ff",
+              B:"#2a5cff", y:"#ffd23a", s:"#f2c9a0", R:"#d83a3a", o:"#ff8a1a", e:"#ffe066" };
+  const tile = rows => {
+    const c = document.createElement("canvas"); c.width = c.height = 8;
+    const x = c.getContext("2d");
+    rows.forEach((r, y) => { for (let i = 0; i < 8; i++) if (C[r[i]]) { x.fillStyle = C[r[i]]; x.fillRect(i, y, 1, 1); } });
+    return c;
+  };
+  const swap = (rows, a, b) => rows.map(r => r.replace(new RegExp(`[${a}${b}]`, "g"), ch => ch === a ? b : a));
+  const DIRT = tile(["bbbdbbbb","bdbbbbdb","bbbbdbbb","dbbbbbbb","bbbdbbbd","bbbbbdbb","bdbbbbbb","bbbbdbbb"]);
+  const WALL = tile(["rrrmrrrm","rrrmrrrm","mmmmmmmm","rmrrrmrr","rmrrrmrr","mmmmmmmm","rrrmrrrm","mmmmmmmm"]);
+  const STEEL = ["wwwwwwwg","wggggggk","wgwggwgk","wggggggk","wggggggk","wgwggwgk","wggggggk","gkkkkkkk"];
+  const STEELT = tile(STEEL), EXITO = tile(STEEL.map(r => r.replace(/g/g, "e")));
+  const ROCK = tile(["..gggg..",".gwwggg.","gwwggggk","gwgggggk","ggggggkk","gggggkkk",".ggkkkk.","..kkkk.."]);
+  const GEMB = ["...cc...","..cccB..",".ccccccB","cccccccB",".BccccB.","..BccB..","...BB...","........"];
+  const GEMS = [0, 1, 2, 3].map(k => tile(GEMB.map((r, y) => [...r].map((ch, x) => ch === "c" && (x + y + k * 2) % 8 < 2 ? "w" : ch).join(""))));
+  const MAN = {
+    stand: tile(["..yyyy..",".yyyyyy.","..skks..","..ssss..",".RRRRRR.","s.RRRR.s","..B..B..",".BB..BB."]),
+    blink: tile(["..yyyy..",".yyyyyy.","..ssss..","..ssss..",".RRRRRR.","s.RRRR.s","..B..B..",".BB..BB."]),
+    w1: tile(["..yyyy..",".yyyyyyy","...sks..","...sss..","..RRRR..","..RRRRs.","..B..B..",".BB...BB"]),
+    w2: tile(["..yyyy..",".yyyyyyy","...sks..","...sss..","..RRRR..",".sRRRR..","...BB...","...BB..."])
+  };
+  const FLYA = ["oooooooo","o......o","o.eeee.o","o.e..e.o","o.e..e.o","o.eeee.o","o......o","oooooooo"];
+  const FLYB = ["........",".oooooo.",".o....o.",".o.ee.o.",".o.ee.o.",".o....o.",".oooooo.","........"];
+  const FLY = [tile(FLYA), tile(swap(FLYA, "o", "e")), tile(FLYB), tile(swap(FLYB, "o", "e"))];
+  const BFLY = [tile(["B......B","BB....BB","BcB..BcB","BccBBccB","BccBBccB","BcB..BcB","BB....BB","B......B"]),
+                tile([".B....B.",".BB..BB.",".BcBBcB.",".BccccB.",".BccccB.",".BcBBcB.",".BB..BB.",".B....B."])];
+  const BOOM = [tile(["...w....",".w..e.w.","..eooe..","w.oooo.e","..eooe..",".e.o..w.","...w.e..","........"]),
+                tile([".e..w..e","...ooo..","w.oeeeo.",".oewweo.",".oewweo.",".oeeeo.w","..ooo...","e..w..e."]),
+                tile(["w..e...w","..o..o..",".o....o.","e......e","........",".o....o.","..o..o..","w..e...w"])];
+
+  const grid = new Uint8Array(W * H), dirs = new Uint8Array(W * H), fall = new Uint8Array(W * H), done = new Uint8Array(W * H);
+  const DX = [0, 1, 0, -1], DY = [-1, 0, 1, 0];
+  let st = "title", level = 1, startLevel = 1, maxLevel = 1, lives = 3, score = 0, gems = 0, need = 0, gemVal = 5, time = 150;
+  let exitOpen = false, px = 2, py = 2, face = 1, walkF = 0, pushCnt = 0, lastTick = 0, T0 = 0, pauseAt = 0, stT = 0, flash = 0, lastBeep = 0;
+  let held = [], touchDir = -1, sw = null, hs = [];
+  try { maxLevel = Math.max(1, +localStorage.getItem("faf-caves-max") || 1); hs = JSON.parse(localStorage.getItem("faf-caves-hs") || "[]"); } catch (_) {}
+
+  function rng(seed) { return () => { seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  function gen(lv) {
+    const R = rng(lv * 7919 + 1987);
+    dirs.fill(0); fall.fill(0);
+    const set = (x, y, v) => { if (x > 0 && y > 0 && x < W - 1 && y < H - 1) grid[y * W + x] = v; };
+    for (let i = 0; i < W * H; i++) { const r = R(); grid[i] = r < .09 + lv * .006 ? T.ROCK : r < .15 + lv * .006 ? T.GEM : r < .19 + lv * .006 ? T.SP : T.DIRT; }
+    for (let k = 0, n = 2 + lv % 4; k < n; k++) {
+      const hor = R() < .6, len = 6 + Math.floor(R() * 14), x0 = 3 + Math.floor(R() * (W - 6)), y0 = 4 + Math.floor(R() * (H - 6));
+      for (let j = 0; j < len; j++) if (R() < .9) set(hor ? x0 + j : x0, hor ? y0 : y0 + j, T.WALL);
+    }
+    const room = type => {
+      for (let tries = 0; tries < 60; tries++) {
+        const x = 4 + Math.floor(R() * (W - 8)), y = 3 + Math.floor(R() * (H - 6));
+        if (x < 10 && y < 8) continue;
+        for (let yy = -1; yy <= 1; yy++) for (let xx = -2; xx <= 2; xx++) set(x + xx, y + yy, T.SP);
+        set(x, y, type); dirs[y * W + x] = Math.floor(R() * 4); return;
+      }
+    };
+    for (let k = 0, n = Math.min(1 + (lv >> 1), 6); k < n; k++) room(T.FLY);
+    for (let k = 0, n = Math.min(Math.floor((lv + 1) / 3), 4); k < n; k++) room(T.BFLY);
+    for (let x = 0; x < W; x++) { grid[x] = T.STEEL; grid[(H - 1) * W + x] = T.STEEL; }
+    for (let y = 0; y < H; y++) { grid[y * W] = T.STEEL; grid[y * W + W - 1] = T.STEEL; }
+    px = 2; py = 2;
+    for (let yy = 1; yy <= 3; yy++) for (let xx = 1; xx <= 3; xx++) set(xx, yy, T.DIRT);
+    set(px, py, T.MAN);
+    const ey = 3 + Math.floor(R() * (H - 6));
+    grid[ey * W + W - 1] = T.EXIT; set(W - 2, ey, T.DIRT);
+    let count = 0; for (let i = 0; i < W * H; i++) if (grid[i] === T.GEM) count++;
+    need = Math.max(8, Math.floor(count * .5)); gemVal = 5 + lv; time = Math.max(90, 160 - lv * 4);
+  }
+
+  function sfx(k) {
+    const a = ac(); if (!a) return;
+    const t = a.currentTime;
+    if (k === "pick") { tone(a, t, .05, 1760, .06); tone(a, t + .04, .07, 2350, .05); }
+    if (k === "rock") noise(a, t, .09, .3, "lowpass", 380);
+    if (k === "gem") tone(a, t, .08, 1320, .05, "triangle");
+    if (k === "push") noise(a, t, .05, .2, "lowpass", 300);
+    if (k === "boom") { noise(a, t, .6, .45, "lowpass", 900); tone(a, t, .3, 70, .08, "sawtooth"); }
+    if (k === "exit") [660, 880, 1100, 1320].forEach((f, i) => tone(a, t + i * .07, .1, f, .06));
+    if (k === "tick") tone(a, t, .03, 1000, .04);
+    if (k === "die") [440, 330, 220, 147].forEach((f, i) => tone(a, t + i * .12, .15, f, .06));
+  }
+
+  function newGame() { lives = 3; score = 0; level = startLevel; startCave(); }
+  function startCave() { gen(level); gems = 0; exitOpen = false; st = "play"; T0 = performance.now(); stT = T0; lastTick = T0; held = []; pushCnt = 0; }
+  const timeLeft = () => Math.max(0, Math.ceil(time - (performance.now() - T0) / 1000));
+  function die() { if (st !== "play") return; st = "dying"; stT = performance.now(); lives--; sfx("die"); }
+  function explode(c, toGem) {
+    const base = toGem ? T.XD : T.XS;
+    for (let yy = -1; yy <= 1; yy++) for (let xx = -1; xx <= 1; xx++) {
+      const n = c + yy * W + xx;
+      if (grid[n] === T.STEEL || grid[n] === T.EXIT) continue;
+      if (grid[n] === T.MAN) die();
+      grid[n] = base; fall[n] = 0; done[n] = 1;
+    }
+    sfx("boom");
+  }
+  function curDir() { return held.length ? held[held.length - 1] : touchDir; }
+  function movePlayer() {
+    const pi = py * W + px;
+    if (st !== "play" || grid[pi] !== T.MAN) return;
+    const d = curDir();
+    if (d < 0) { pushCnt = 0; return; }
+    if (DX[d]) face = DX[d];
+    walkF++;
+    const ni = pi + DY[d] * W + DX[d], nt = grid[ni];
+    if (nt === T.SP || nt === T.DIRT || nt === T.GEM) {
+      if (nt === T.GEM) { gems++; score += gems > need ? gemVal * 2 : gemVal; sfx("pick"); if (!exitOpen && gems >= need) { exitOpen = true; flash = performance.now(); sfx("exit"); } }
+      grid[ni] = T.MAN; grid[pi] = T.SP; px += DX[d]; py += DY[d]; done[ni] = 1; pushCnt = 0;
+    } else if (nt === T.EXIT && exitOpen) {
+      grid[pi] = T.SP; px += DX[d]; st = "won"; stT = performance.now();
+      score += timeLeft() * Math.max(1, level);
+      maxLevel = Math.max(maxLevel, level + 1);
+      try { localStorage.setItem("faf-caves-max", String(maxLevel)); } catch (_) {}
+      sfx("exit");
+    } else if (nt === T.ROCK && !DY[d]) {
+      const bi = ni + DX[d];
+      if (grid[bi] === T.SP && ++pushCnt >= 2) { grid[bi] = T.ROCK; grid[ni] = T.MAN; grid[pi] = T.SP; px += DX[d]; done[bi] = done[ni] = 1; pushCnt = 0; sfx("push"); }
+    }
+  }
+  function physics(i, t) {
+    const b = i + W, bt = grid[b];
+    if (bt === T.SP) { grid[b] = t; grid[i] = T.SP; fall[b] = 1; fall[i] = 0; done[b] = 1; return; }
+    if (fall[i] && (bt === T.MAN || bt === T.FLY)) { explode(b, false); return; }
+    if (fall[i] && bt === T.BFLY) { explode(b, true); return; }
+    if (bt === T.ROCK || bt === T.GEM || bt === T.WALL) {
+      for (const s of [-1, 1]) if (grid[i + s] === T.SP && grid[b + s] === T.SP) { grid[i + s] = t; grid[i] = T.SP; fall[i + s] = 1; fall[i] = 0; done[i + s] = 1; return; }
+    }
+    if (fall[i]) { fall[i] = 0; sfx(t === T.GEM ? "gem" : "rock"); }
+  }
+  function enemy(i, t) {
+    for (let d = 0; d < 4; d++) if (grid[i + DY[d] * W + DX[d]] === T.MAN) { explode(i, t === T.BFLY); return; }
+    const d = dirs[i], l = (d + 3) % 4, r = (d + 1) % 4;
+    for (const nd of t === T.FLY ? [l, d] : [r, d]) {
+      const n = i + DY[nd] * W + DX[nd];
+      if (grid[n] === T.SP) { grid[n] = t; dirs[n] = nd; grid[i] = T.SP; done[n] = 1; return; }
+    }
+    dirs[i] = t === T.FLY ? r : l;
+  }
+  function tick() {
+    done.fill(0);
+    movePlayer();
+    for (let i = W; i < W * (H - 1); i++) {
+      if (done[i]) continue;
+      const t = grid[i];
+      if (t === T.ROCK || t === T.GEM) physics(i, t);
+      else if (t === T.FLY || t === T.BFLY) enemy(i, t);
+      else if (t >= T.XS) {
+        const base = t >= T.XD ? T.XD : T.XS, s = t - base;
+        grid[i] = s >= 3 ? (base === T.XD ? T.GEM : T.SP) : t + 1; done[i] = 1;
+      }
+    }
+    if (st === "play") {
+      const tl = timeLeft();
+      if (tl <= 10 && tl !== lastBeep) { lastBeep = tl; sfx("tick"); }
+      if (tl <= 0) explode(py * W + px, false);
+    }
+  }
+
+  /* -- drawing -- */
+  function dtext(s, x, y, col) { const a = atlas(col); for (let i = 0; i < s.length; i++) g.drawImage(a, gi(s[i]) * 8, 0, 8, 8, x + i * 8, y, 8, 8); }
+  function ctext(s, y, col) { dtext(s, (320 - s.length * 8) >> 1, y, col); }
+  function big(s, y, sx, sy, now) {
+    const w = s.length * 8 * sx, h = 8 * sy, c = document.createElement("canvas"); c.width = w; c.height = h;
+    const x = c.getContext("2d"); x.imageSmoothingEnabled = false;
+    const a = atlas("#ffffff");
+    for (let i = 0; i < s.length; i++) x.drawImage(a, gi(s[i]) * 8, 0, 8, 8, i * 8 * sx, 0, 8 * sx, 8 * sy);
+    x.globalCompositeOperation = "source-in";
+    const gr = x.createLinearGradient(0, 0, 0, h);
+    gr.addColorStop(0, "#ffffff"); gr.addColorStop(.45, "#55d8ff"); gr.addColorStop(.55, "#2a5cff"); gr.addColorStop(1, "#ffd23a");
+    x.fillStyle = gr; x.fillRect(0, 0, w, h);
+    g.drawImage(c, (320 - w) >> 1, y);
+  }
+  function drawCave(now) {
+    const af = Math.floor(now / 110);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const t = grid[y * W + x], X = x * 8, Y = OY + y * 8;
+      let img = null;
+      switch (t) {
+        case T.DIRT: img = DIRT; break;
+        case T.WALL: img = WALL; break;
+        case T.STEEL: img = STEELT; break;
+        case T.ROCK: img = ROCK; break;
+        case T.GEM: img = GEMS[(af + x) & 3]; break;
+        case T.EXIT: img = exitOpen && (af & 2) ? EXITO : STEELT; break;
+        case T.FLY: img = FLY[af & 3]; break;
+        case T.BFLY: img = BFLY[(af >> 1) & 1]; break;
+        case T.MAN: {
+          const d = curDir();
+          img = d < 0 ? ((af % 24) === 0 ? MAN.blink : MAN.stand) : (walkF & 1 ? MAN.w1 : MAN.w2);
+          if (d >= 0 && face < 0) { g.save(); g.translate(X + 8, Y); g.scale(-1, 1); g.drawImage(img, 0, 0); g.restore(); img = null; }
+          else if (d < 0) { /* facing forward */ }
+          break;
+        }
+        default: if (t >= T.XS) img = BOOM[Math.min(2, t - (t >= T.XD ? T.XD : T.XS))];
+      }
+      if (img) g.drawImage(img, X, Y);
+    }
+  }
+  function drawStatus(now) {
+    g.fillStyle = "#000"; g.fillRect(0, 0, 320, OY);
+    g.drawImage(GEMS[0], 8, 8); dtext(p2(need), 18, 8, "#ffd23a"); dtext("x" + gemVal, 38, 8, "#ffffff");
+    g.drawImage(GEMS[Math.floor(now / 110) & 3], 88, 8); dtext(p2(Math.min(99, gems)), 98, 8, exitOpen ? "#ffffff" : "#ffd23a");
+    dtext("T" + String(timeLeft()).padStart(3, "0"), 140, 8, timeLeft() <= 10 && st === "play" ? "#d83a3a" : "#ffffff");
+    dtext("C" + p2(level), 188, 8, "#55d8ff");
+    for (let i = 0; i < Math.max(0, lives); i++) g.drawImage(MAN.stand, 216 + i * 9, 8);
+    dtext(String(score).padStart(6, "0"), 264, 8, "#ffffff");
+  }
+  function box(lines) {
+    const h = lines.length * 12 + 10, y = OY + ((176 - h) >> 1);
+    g.fillStyle = "rgba(0,0,0,.82)"; g.fillRect(40, y, 240, h);
+    g.strokeStyle = "#ffd23a"; g.strokeRect(40.5, y + .5, 239, h - 1);
+    lines.forEach(([s, c], i) => ctext(s, y + 6 + i * 12, c || "#ffffff"));
+  }
+  function drawTitle(now) {
+    g.fillStyle = "#000"; g.fillRect(0, 0, 320, 200);
+    big("DIAMOND", 10, 4, 3, now); big("CAVES", 40, 4, 3, now);
+    const af = Math.floor(now / 110);
+    for (let i = 0; i < 40; i++) g.drawImage([ROCK, GEMS[(af + i) & 3], DIRT, FLY[af & 3], BFLY[(af >> 1) & 1], WALL][i % 6], i * 8, 70);
+    ctext("CAVE  < " + p2(startLevel) + " >   (UP TO " + p2(maxLevel) + ")", 86, "#55d8ff");
+    if ((af >> 2) & 1) ctext("PRESS FIRE  OR  TAP TO START", 100, "#ffd23a");
+    ctext("HIGH SCORES", 118, "#ffffff");
+    const list = hs.length ? hs : [{ s:0, c:1 }];
+    list.slice(0, 5).forEach((h, i) => ctext(`${i + 1}.  ${String(h.s).padStart(6, "0")}   CAVE ${p2(h.c)}`, 130 + i * 10, i ? "#9a9a9a" : "#ffd23a"));
+    ctext("ARROWS/SWIPE  R=RETRY  ESC=WORKBENCH", 186, "#4e4e4e");
+  }
+  function render() {
+    const now = performance.now();
+    if (st === "title") { drawTitle(now); return SCR; }
+    if (st === "play" || st === "dying") { while (now - lastTick >= 120) { lastTick += 120; tick(); } } else lastTick = now;
+    if (st === "dying" && now - stT > 1800) st = lives > 0 ? "dead" : "over";
+    g.fillStyle = "#000"; g.fillRect(0, 0, 320, 200);
+    drawCave(now); drawStatus(now);
+    if (exitOpen && now - flash < 160) { g.fillStyle = "rgba(255,255,255,.6)"; g.fillRect(0, OY, 320, 176); }
+    if (st === "play" && now - stT < 1600) box([["CAVE " + p2(level), "#55d8ff"], ["COLLECT " + need + " DIAMONDS", "#ffd23a"]]);
+    if (st === "dead") box([["OUCH!", "#d83a3a"], [lives + (lives === 1 ? " LIFE" : " LIVES") + " LEFT"], ["FIRE / TAP TO RETRY", "#ffd23a"]]);
+    if (st === "won") { box([["CAVE " + p2(level) + " CLEARED!", "#ffd23a"], ["TIME BONUS ADDED"], ["SCORE " + score]]); if (now - stT > 2200) { level++; startCave(); } }
+    if (st === "over") box([["GAME OVER", "#d83a3a"], ["SCORE " + score, "#ffd23a"], ["FIRE / TAP"]]);
+    return SCR;
+  }
+  function gameOver() {
+    hs.push({ s:score, c:level }); hs.sort((a, b) => b.s - a.s); hs = hs.slice(0, 5);
+    try { localStorage.setItem("faf-caves-hs", JSON.stringify(hs)); } catch (_) {}
+    st = "title";
+  }
+  function fire() {
+    ac();
+    if (st === "title") newGame();
+    else if (st === "dead") startCave();
+    else if (st === "over") gameOver();
+  }
+  const KEYS = { ArrowUp:0, ArrowRight:1, ArrowDown:2, ArrowLeft:3, w:0, d:1, s:2, a:3, W:0, D:1, S:2, A:3 };
+  function key(e, down) {
+    if (down && e.key === "Escape") { stop(); return; }
+    const d = KEYS[e.key];
+    if (d !== undefined) {
+      e.preventDefault();
+      held = held.filter(x => x !== d);
+      if (down) {
+        held.push(d);
+        if (st === "title" && (d === 1 || d === 3)) startLevel = clamp(startLevel + (d === 1 ? 1 : -1), 1, maxLevel);
+      }
+      return;
+    }
+    if (!down) return;
+    if (e.key === " " || e.key === "Enter") { e.preventDefault(); fire(); }
+    if ((e.key === "r" || e.key === "R") && st === "play") explode(py * W + px, false);
+  }
+  /* -- touch: swipe on the cave, or the pad below it -- */
+  let pad = null, view = { ox:0, oy:0, w:640, h:200 };
+  function padHit(p) {
+    if (!pad) return -1;
+    for (const b of pad) if (p.x >= b.x && p.x < b.x + b.w && p.y >= b.y && p.y < b.y + b.h) return b.d;
+    return -1;
+  }
+  function pointer(type, p, e) {
+    if (type === "down") {
+      const d = padHit(p);
+      if (d >= 0) { touchDir = d; sw = { pad:true }; return; }
+      sw = { x:p.x, y:p.y, moved:false };
+      if (st === "title" && p.y > view.oy + view.h * .38 && p.y < view.oy + view.h * .48) {     // the cave selector line
+        const mid = view.ox + view.w / 2;
+        if (Math.abs(p.x - mid) > view.w * .05) startLevel = clamp(startLevel + (p.x > mid ? 1 : -1), 1, maxLevel);
+        sw.moved = true;
+      }
+    } else if (type === "move" && sw) {
+      if (sw.pad) { const d = padHit(p); if (d >= 0) touchDir = d; return; }
+      const dx = (p.x - sw.x) / 2, dy = p.y - sw.y;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) > 6) { sw.moved = true; touchDir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 1 : 3) : (dy > 0 ? 2 : 0); }
+    } else if (type === "up") {
+      if (sw && !sw.moved && !sw.pad) fire();
+      touchDir = -1; sw = null;
+    }
+  }
+  function draw(ctx2, LWv, LHv, touch) {
+    const img = render();
+    let f = Math.min(LWv / 640, LHv / 200); if (f >= 1) f = Math.floor(f);
+    const w = Math.round(640 * f), h = Math.round(200 * f), ox = (LWv - w) >> 1;
+    const space = LHv - h, usePad = touch && space >= 66;
+    const oy = usePad ? 4 : (LHv - h) >> 1;
+    view = { ox, oy, w, h };
+    ctx2.fillStyle = "#000"; ctx2.fillRect(0, 0, LWv, LHv);
+    ctx2.imageSmoothingEnabled = f < 1;              // shrinking without smoothing drops whole pixel columns
+    ctx2.drawImage(img, 0, 0, 320, 200, ox, oy, w, h);
+    ctx2.imageSmoothingEnabled = false;
+    pad = null;
+    if (usePad) {
+      const avail = LHv - oy - h - 10, bh = Math.min(48, Math.floor(avail / 3)), bw = bh * 2, cx = LWv >> 1, top = oy + h + 6 + ((avail - bh * 3) >> 1);
+      pad = [{ d:0, x:cx - bw / 2, y:top, w:bw, h:bh }, { d:3, x:cx - bw * 1.5, y:top + bh, w:bw, h:bh },
+             { d:1, x:cx + bw / 2, y:top + bh, w:bw, h:bh }, { d:2, x:cx - bw / 2, y:top + bh * 2, w:bw, h:bh }];
+      for (const b of pad) {
+        ctx2.fillStyle = touchDir === b.d ? "#2a2a2a" : "#141414"; ctx2.fillRect(b.x, b.y, b.w, b.h);
+        ctx2.strokeStyle = "#555"; ctx2.strokeRect(b.x + .5, b.y + .5, b.w - 1, b.h - 1);
+        const mx = b.x + b.w / 2, my = b.y + b.h / 2, s = b.h * .28;
+        ctx2.fillStyle = "#ffd23a"; ctx2.beginPath();
+        if (b.d === 0) { ctx2.moveTo(mx, my - s); ctx2.lineTo(mx + s * 2, my + s); ctx2.lineTo(mx - s * 2, my + s); }
+        if (b.d === 2) { ctx2.moveTo(mx, my + s); ctx2.lineTo(mx + s * 2, my - s); ctx2.lineTo(mx - s * 2, my - s); }
+        if (b.d === 3) { ctx2.moveTo(mx - s * 2, my); ctx2.lineTo(mx + s * 2, my - s); ctx2.lineTo(mx + s * 2, my + s); }
+        if (b.d === 1) { ctx2.moveTo(mx + s * 2, my); ctx2.lineTo(mx - s * 2, my - s); ctx2.lineTo(mx - s * 2, my + s); }
+        ctx2.fill();
+      }
+    }
+  }
+  function start() { st = "title"; startLevel = maxLevel; held = []; touchDir = -1; }
+  function stop() { held = []; touchDir = -1; if (mode === "cave") { mode = "wb"; dirty(); } }
+  return { start, stop, draw, key, pointer, _dbg: { get st() { return st; }, newGame, tick, get grid() { return grid; } } };
+})();
+let touchSeen = false;
+function startCaves() {
+  if (freeMem() < 98304) { noMem("Diamond Caves"); return; }
+  kbd.blur(); DC.start(); mode = "cave"; anim();
+}
+function openGames() {
+  openWin({ id:"games", title:"Games", type:"drawer", gauge:false, mem:12288, x:90 + cascade(), y:60 + cascade(), w:200, h:64,
+    icons: [ mkIcon("Caves", "caves", () => startCaves()) ] });
+}
 
 if (theme !== "amiga") setTheme(theme);
 resize();
