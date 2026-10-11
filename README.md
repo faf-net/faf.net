@@ -62,5 +62,5 @@ hoch wie breit). Keine Frameworks, kein Build-Schritt, keine Tracker.
 
 ## Lizenz
 
-Eigener Code und eigene Grafik: **MIT** (siehe `LICENSE`). Ausgenommen sind die Topaz-Schrift
+Eigener Code und eigene Grafik: **MIT** (siehe `LICENSE`, Fremdanteile in `NOTICE`). Ausgenommen sind die Topaz-Schrift
 (GPL mit Font-Ausnahme) und `kickstart13.png` (© Commodore-Amiga).
