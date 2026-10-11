@@ -31,6 +31,7 @@
 <div class="sr">
   <h1>faf.net</h1>
   <p>FAF = "FAF Ain't Falken". A private node on the net. Run for fun, not for profit. No ads, no trackers, no cookies.</p>
+  <p>OpenPGP fingerprint: 1E27 72BA 59E0 791E 146C CB23 5F8D 266C 7127 8827</p>
   <p><a href="wopr.html">WOPR terminal</a> · <a href="https://github.com/faf-net">GitHub: faf-net</a></p>
 </div>
 <noscript><p style="color:#fff;font:16px monospace;padding:2em">faf.net — a private node on the net. (This Workbench needs JavaScript.)</p></noscript>
@@ -415,10 +416,10 @@ const cascade = () => wins.length * 14;
 function openDisk(id = "disk") {
   openWin({ id, title:"faf.net", type:"drawer", gauge:true, fill:.79, mem:18432,
     x: (LW < 520 ? 6 : Math.floor(LW * .1)) + (id === "disk" ? 0 : 24), y: 22 + (id === "disk" ? 0 : 16), w: 278, h: 136,
-    rows: [3, 3, 1],                          // About · GitHub · Workbench / System · Utilities · Games / Trashcan
+    rows: [3, 3, 2],                          // About · GitHub · Workbench / System · Utilities · Games / PGP Key · Trashcan
     icons: [ mkIcon("About", "doc", openAbout), mkIcon("GitHub", "github", goGithub), mkIcon("Workbench", "palette", toggleTheme),
              mkIcon("System", "drawer", openSystem), mkIcon("Utilities", "drawer", openUtil), mkIcon("Games", "drawer", openGames),
-             mkIcon("Trashcan", "trash", openTrash) ] });
+             mkIcon("PGP Key", "pgp", () => openPGP()), mkIcon("Trashcan", "trash", openTrash) ] });
 }
 function openSystem() {
   openWin({ id:"system", title:"System", type:"drawer", gauge:false, mem:12288, x:50 + cascade(), y:40 + cascade(), w:266, h:64,
@@ -623,7 +624,7 @@ function exec(raw) {
     case "help": case "?":
       out("DIR INFO DATE AVAIL VERSION ECHO TYPE");
       out("ABOUT CLOCK WOPR GITHUB PALETTE CLS ENDCLI");
-      out("XCOPY VIRUSX SYSINFO CAVES REBOOT SOUND"); break;
+      out("XCOPY VIRUSX SYSINFO CAVES PGP REBOOT SOUND"); break;
     case "dir": case "list":
       out("     Trashcan (dir)"); out("  About     Clock     GitHub    Shell");  out("  Workbench WOPR"); break;
     case "info":
@@ -658,6 +659,7 @@ function exec(raw) {
     case "virusx": openVirusX(); break;
     case "sysinfo": openSysInfo(); break;
     case "caves": startCaves(); break;
+    case "pgp": out("OpenPGP " + PGP_FPR); openPGP(); break;
     case "xcopy": case "x-copy": startXCopy(); break;
     case "sound": muted = /^off$/i.test(arg); out("Sound " + (muted ? "off" : "on")); break;
     default: out("Unknown command " + c0);
@@ -1783,6 +1785,53 @@ function startCaves() {
 function openGames() {
   openWin({ id:"games", title:"Games", type:"drawer", gauge:false, mem:12288, x:90 + cascade(), y:60 + cascade(), w:200, h:64,
     icons: [ mkIcon("Caves", "caves", () => startCaves()) ] });
+}
+
+/* ---------- PGP Key — the address never appears as text in the page source */
+ICON.pgp = makeIcon(30, 14, g => {
+  g.rect(0, 0, 30, 14, 4);
+  g.ell(7, 7, 6, 5, 3, 2); g.rect(5, 6, 4, 2, 0);
+  g.rect(13, 5, 16, 4, 1); g.frame(13, 5, 16, 4, 2);
+  g.rect(21, 8, 3, 4, 1); g.frame(21, 8, 3, 4, 2); g.rect(25, 8, 3, 5, 1); g.frame(25, 8, 3, 5, 2);
+});
+const PGP_ARMOR = [
+  "-----BEGIN PGP PUBLIC KEY BLOCK-----",
+  "",
+  "xjMEaKipwBYJKwYBBAHaRw8BAQdA8LxXM422rduEAYif0Zf4/7Yu0ydqGefy",
+  "77cXqMIBBHfNHWZyYW5rQGZhZi5uZXQgPGZyYW5rQGZhZi5uZXQ+wsARBBMW",
+  "CgCDBYJoqKnAAwsJBwmQX40mbHEniCdFFAAAAAAAHAAgc2FsdEBub3RhdGlv",
+  "bnMub3BlbnBncGpzLm9yZ5/CVM8Ur+Ct8j1jlka3JqxErxeT+nVZ1hRJSi3n",
+  "XJuHAxUKCAQWAAIBAhkBApsDAh4BFiEEHidyulngeR4UbMsjX40mbHEniCcA",
+  "AN35AQD53+IxXXq6zQHjwzeaiq0Os3KROiwEtZmcxUkJFAYzpQD/YzjeQSkj",
+  "7qX693SjFLa3a3cnBa3MTIqEGGQfL9tkIwvOOARoqKnAEgorBgEEAZdVAQUB",
+  "AQdASS8mxnJxcFu+2lZhyWvIm2226fni/uMpGUkDh4Hd2y4DAQgHwr4EGBYK",
+  "AHAFgmioqcAJkF+NJmxxJ4gnRRQAAAAAABwAIHNhbHRAbm90YXRpb25zLm9w",
+  "ZW5wZ3Bqcy5vcmfOQS9gF1YIxOPoeyoiHODyIlAW6L2MTJedHn3ywdHuhgKb",
+  "DBYhBB4ncrpZ4HkeFGzLI1+NJmxxJ4gnAABRvgEAiJ6sP4XyBlOyq9UbHbk2",
+  "x1Ltof65BmwC3rEbik3YBbMBANB8JVhy0bL2CUjCTbVqRLOe7tQ0SzqygHuf",
+  "UaTkgEUP",
+  "=XAE2",
+  "-----END PGP PUBLIC KEY BLOCK-----"
+];
+const PGP_FPR = "1E27 72BA 59E0 791E 146C  CB23 5F8D 266C 7127 8827";
+const mailAddr = () => ["frank", ["faf", "net"].join(".")].join(String.fromCharCode(64));   // assembled at run time only
+const pgpText = () => PGP_ARMOR.map(l => l + String.fromCharCode(10)).join("");
+function pgpDownload() {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([pgpText()], { type:"application/pgp-keys" }));
+  a.download = "faf-net-pgp.asc"; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+function openPGP() {
+  const lines = [["OpenPGP  ed25519 / cv25519", OR], "", mailAddr(), "", "Fingerprint", PGP_FPR.slice(0, 24), PGP_FPR.slice(26), "", "created 2025-08-22, no expiry"];
+  const s = panelSize(lines, 3);
+  const w = openWin({ id:"pgp", title:"PGP Key", type:"panel", mem:6144, lines, x:80 + cascade(), y:40 + cascade(), w:Math.max(s.w, 250), h:s.h,
+    buttons:[["Mail", () => { location.href = "mailto:" + mailAddr(); }], ["Download", pgpDownload], ["Key", openPGPKey]] });
+}
+function openPGPKey() {
+  const s = panelSize(PGP_ARMOR, 2);
+  const w = openWin({ id:"pgpkey", title:"pgpkey.asc", type:"panel", mem:8192, lines:PGP_ARMOR, x:20 + cascade(), y:20 + cascade(), w:s.w, h:s.h,
+    buttons:[["Copy", () => { try { navigator.clipboard.writeText(pgpText()); titleMsg = { t:"Key copied to clipboard.", until:performance.now() + 2500 }; } catch (_) {} }], ["OK", () => closeWin(w)]] });
 }
 
 if (theme !== "amiga") setTheme(theme);

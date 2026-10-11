@@ -24,7 +24,7 @@ hoch wie breit). Keine Frameworks, kein Build-Schritt, keine Tracker.
  Desktop   faf.net · RAM DISK · DF1:NDOS · WOPR
  faf.net   About · GitHub · Workbench
            System · Utilities · Games
-           Trashcan
+           PGP Key · Trashcan
  System    Kickstart · Shell · Clock
  Utilities X-Copy · VirusX · SysInfo · SCA-Virus · ByteBandit
  Games     Caves
@@ -53,6 +53,9 @@ hoch wie breit). Keine Frameworks, kein Build-Schritt, keine Tracker.
   Felsen, Glühwürmchen und Schmetterlinge, erzeugte Höhlen mit steigender Schwierigkeit,
   Highscore im Browser. Pfeiltasten/WASD, Leertaste, R, Esc; am Handy Wischen oder Steuerkreuz.
 - **WOPR** auf dem Desktop führt zum WarGames-Terminal.
+- **PGP Key:** OpenPGP-Schlüssel (ed25519/cv25519, Fingerabdruck `1E27 72BA 59E0 791E 146C CB23 5F8D 266C 7127 8827`)
+  mit Mail, Download und einem Schlüsselfenster mit Copy. Die E-Mail-Adresse steht nirgends als Text
+  im Quelltext — sie wird erst zur Laufzeit zusammengesetzt und nur auf den Canvas gezeichnet.
 
 ## Herkunft und Rechte
 
