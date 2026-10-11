@@ -14,9 +14,10 @@ hoch wie breit). Keine Frameworks, kein Build-Schritt, keine Tracker.
 | `index.html` | die Workbench (HTML/CSS/JS inline, Topaz-8 eingebettet) |
 | `wopr.html` | WOPR-Terminal aus *WarGames* (1983) — grüner CRT-Look, Tic-Tac-Toe gegen eine unschlagbare KI |
 | `kickstart13.png` | die Workbench-1.3-Diskette mit Hand, im Fenster „Kickstart 1.3“ |
+| `pgpkey.asc` | der öffentliche OpenPGP-Schlüssel (auch bei keys.openpgp.org und per WKD) |
 | `v1/` | erster Stand der Workbench (Sicherung) |
 
-**Deployment:** `index.html`, `wopr.html` und `kickstart13.png` ins Web-Root, fertig.
+**Deployment:** `index.html`, `wopr.html`, `kickstart13.png` und `pgpkey.asc` ins Web-Root, fertig.
 
 ## Was drin ist
 
