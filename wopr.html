@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>WOPR</title>
+<style>
+  :root {
+    --bg:        #050a05;
+    --phosphor:  #33ff5e;
+    --dim:       #1a8f3c;
+    --faint:     #0d5223;
+    --amber:     #ffb000;
+    --amber-dim: #7a5400;
+    --glow:      0 0 4px rgba(51,255,94,.45), 0 0 11px rgba(51,255,94,.20);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  html, body { height:100%; background:#000; }
+
+  body {
+    font-family: "Consolas", "DejaVu Sans Mono", "Liberation Mono", "Courier New", monospace;
+    color: var(--phosphor);
+    overflow: hidden;
+    cursor: default;
+    -webkit-font-smoothing: none;
+  }
+
+  /* ---- CRT enclosure ---------------------------------------------------- */
+  #crt {
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at center, #071207 0%, #030603 70%, #000 100%);
+    overflow: hidden;
+    border-radius: 2vw;
+    box-shadow: inset 0 0 12vw rgba(0,0,0,.9);
+  }
+
+  /* curvature vignette */
+  #crt::before {
+    content:"";
+    position:absolute; inset:0;
+    background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.55) 100%);
+    pointer-events:none; z-index:5;
+  }
+
+  /* scanlines + flicker */
+  #crt::after {
+    content:"";
+    position:absolute; inset:0;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(0,0,0,0) 0px,
+      rgba(0,0,0,0) 2px,
+      rgba(0,0,0,.22) 3px,
+      rgba(0,0,0,.22) 4px);
+    pointer-events:none; z-index:6;
+    animation: flicker .12s infinite steps(2);
+  }
+
+  @keyframes flicker { 0%{opacity:.92} 50%{opacity:1} 100%{opacity:.95} }
+
+  /* slow rolling scan bar */
+  #scanbar {
+    position:absolute; left:0; right:0; height:26vh; z-index:4;
+    background: linear-gradient(to bottom, rgba(51,255,94,0), rgba(51,255,94,.045), rgba(51,255,94,0));
+    animation: roll 7.5s linear infinite; pointer-events:none;
+  }
+  @keyframes roll { 0%{ top:-30vh } 100%{ top:100vh } }
+
+  /* ---- screen content --------------------------------------------------- */
+  #screen {
+    position:absolute; inset:0; z-index:3;
+    padding: clamp(14px, 4vh, 44px) clamp(14px, 5vw, 70px);
+    overflow-y:auto; overflow-x:hidden;
+    font-size: clamp(13px, 2.05vh, 20px);
+    line-height: 1.55;
+    text-shadow: var(--glow);
+    letter-spacing: .02em;
+  }
+  #screen::-webkit-scrollbar { width:0; background:transparent; }
+  #screen { scrollbar-width:none; }
+
+  #out { white-space: pre-wrap; word-break: break-word; }
+
+  .dim   { color: var(--dim);   text-shadow: 0 0 4px rgba(26,143,60,.4); }
+  .faint { color: var(--faint); text-shadow:none; }
+  .amber { color: var(--amber); text-shadow: 0 0 5px rgba(255,176,0,.5), 0 0 12px rgba(255,176,0,.25); }
+  .user  { color:#eafff0; text-shadow: 0 0 4px rgba(255,255,255,.4); }
+  .big   { font-size: 1.35em; letter-spacing:.08em; }
+
+  /* ASCII banner: scale to fit, scroll if still too wide, never wrap */
+  .art {
+    display:block; white-space:pre; overflow-x:auto; overflow-y:hidden;
+    font-size: clamp(5px, 1.9vw, 12px); line-height:1.05;
+    color: var(--phosphor); text-shadow: var(--glow);
+    margin:.2em 0; scrollbar-width:none;
+  }
+  .art::-webkit-scrollbar { height:0; }
+
+  /* input line */
+  #inputline { display:none; align-items:baseline; }
+  #inputline.show { display:flex; }
+  #prompt { flex:0 0 auto; margin-right:.5ch; }
+  #cmd {
+    flex:0 0 auto; min-width:1ch;
+    background:transparent; border:none; outline:none;
+    font: inherit; color: var(--phosphor);
+    text-shadow: var(--glow); letter-spacing:.02em;
+    caret-color: transparent;
+    padding:0;
+  }
+  #cmd::placeholder { color: var(--faint); }
+
+  /* blinking block cursor rendered after the field */
+  #caret {
+    display:inline-block; width:.62ch; height:1.05em;
+    background: var(--phosphor); box-shadow: var(--glow);
+    transform: translateY(.16em);
+    animation: blink 1.06s steps(1) infinite;
+  }
+  @keyframes blink { 50%{ opacity:0 } }
+
+  /* boot cursor line */
+  #screen.booting { cursor:progress; }
+
+  /* footer hint */
+  #hint {
+    position:absolute; bottom:1.4vh; right:2.2vw; z-index:7;
+    font-size: clamp(9px, 1.35vh, 12px);
+    color: var(--faint); text-shadow:none; letter-spacing:.1em;
+    pointer-events:none;
+  }
+
+  #sound {
+    position:absolute; top:1.4vh; right:2.2vw; z-index:8;
+    font: inherit; font-size: clamp(9px,1.4vh,12px);
+    background:transparent; border:1px solid var(--faint); color:var(--dim);
+    padding:.25em .7em; border-radius:3px; cursor:pointer; letter-spacing:.1em;
+    text-shadow:none; opacity:.6; transition:opacity .2s;
+  }
+  #sound:hover, #sound:focus-visible { opacity:1; outline:none; border-color:var(--dim); }
+
+  @media (prefers-reduced-motion: reduce) {
+    #crt::after, #scanbar, #caret { animation: none; }
+    #scanbar { display:none; }
+  }
+</style>
+</head>
+<body>
+  <div id="crt">
+    <div id="scanbar"></div>
+    <button id="sound" aria-label="Toggle sound">SOUND: OFF</button>
+    <div id="screen" class="booting" tabindex="0">
+      <div id="out"></div>
+      <div id="inputline">
+        <span id="prompt">&gt;</span>
+        <input id="cmd" type="text" size="1" autocomplete="off" autocapitalize="characters"
+               spellcheck="false" aria-label="terminal input">
+        <span id="caret"></span>
+      </div>
+    </div>
+    <div id="hint">CONNECTION 300 BAUD &mdash; TAP TO TYPE</div>
+  </div>
+
+<script>
+(() => {
+  "use strict";
+
+  const out       = document.getElementById("out");
+  const screen    = document.getElementById("screen");
+  const inputline = document.getElementById("inputline");
+  const cmd       = document.getElementById("cmd");
+  const soundBtn  = document.getElementById("sound");
+
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ====================================================================== */
+  /*  CONFIG — the day faf.net first came online. Change this one date.     */
+  const GENESIS = new Date("2001-04-01T00:00:00Z");
+  /* ====================================================================== */
+
+  const nfmt = n => n.toLocaleString("en-US");
+  const uptimeDays = () =>
+    Math.max(0, Math.floor((Date.now() - GENESIS.getTime()) / 86400000));
+
+  /* ---------- tiny WebAudio soundboard (opt-in) ------------------------- */
+  let audioOn = false, actx = null;
+  soundBtn.addEventListener("click", () => {
+    audioOn = !audioOn;
+    soundBtn.textContent = "SOUND: " + (audioOn ? "ON " : "OFF");
+    if (audioOn && !actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioOn) beep(660, .04, .05);
+    cmd.focus();
+  });
+  function beep(freq, dur, vol) {
+    if (!audioOn || !actx) return;
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = "square"; o.frequency.value = freq;
+    g.gain.value = vol ?? .04;
+    o.connect(g); g.connect(actx.destination);
+    const t = actx.currentTime;
+    o.start(t); g.gain.setValueAtTime(g.gain.value, t);
+    g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    o.stop(t + dur);
+  }
+  function keyclick(){ beep(1200 + Math.random()*400, .012, .02); }
+
+  /* ---------- output helpers -------------------------------------------- */
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+
+  function scroll(){ screen.scrollTop = screen.scrollHeight; }
+
+  function print(text = "", cls = "") {
+    const span = document.createElement("span");
+    if (cls) span.className = cls;
+    span.textContent = text + "\n";
+    out.appendChild(span);
+    scroll();
+  }
+
+  function printArt(text) {
+    const pre = document.createElement("div");
+    pre.className = "art";
+    pre.textContent = text;
+    out.appendChild(pre);
+    scroll();
+  }
+
+  // type a line character-by-character
+  async function type(text = "", { cls = "", cps = 42, beeps = false } = {}) {
+    const span = document.createElement("span");
+    if (cls) span.className = cls;
+    out.appendChild(span);
+    const delay = reduce ? 0 : 1000 / cps;
+    for (const ch of text) {
+      span.textContent += ch;
+      if (beeps && ch !== " ") beep(520 + Math.random()*120, .02, .015);
+      scroll();
+      if (delay) await wait(delay + (ch === "." ? delay*4 : 0));
+    }
+    span.textContent += "\n";
+    scroll();
+  }
+
+  /* ---------- state machine --------------------------------------------- */
+  const S = { BOOT:0, MAIN:1, TTT:4, LOGON:5 };
+  let state = S.BOOT;
+
+  const GAMES = [
+    "TIC-TAC-TOE"
+  ];
+
+  const FORTUNES = [
+    "THERE IS NO PLACE LIKE 127.0.0.1.",
+    "IT'S NOT A BUG. IT'S AN UNDOCUMENTED FEATURE.",
+    "THERE ARE 10 KINDS OF PEOPLE: THOSE WHO GET BINARY AND THOSE WHO DON'T.",
+    "TO ERR IS HUMAN. TO REALLY FOUL THINGS UP REQUIRES A COMPUTER.",
+    "A STRANGE GAME. THE ONLY WINNING MOVE IS NOT TO PLAY.",
+    "GREETINGS, PROGRAM.",
+    "THE CAKE IS A LIE.",
+    "NEVER TRUST A COMPUTER YOU CAN'T THROW OUT A WINDOW.",
+    "WEEK 1: HELLO WORLD.  WEEK 2: STILL DEBUGGING HELLO WORLD.",
+    "KEYBOARD NOT FOUND. PRESS F1 TO CONTINUE.",
+    "I'M SORRY, DAVE. I'M AFRAID I CAN'T DO THAT.",
+    "PC LOAD LETTER? WHAT DOES THAT EVEN MEAN?",
+    "IT WORKS ON MY MACHINE.",
+    "RTFM."
+  ];
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+  // "FAF.NET" — ANSI Shadow figlet
+  const BANNER = [
+    "███████╗ █████╗ ███████╗    ███╗   ██╗███████╗████████╗",
+    "██╔════╝██╔══██╗██╔════╝    ████╗  ██║██╔════╝╚══██╔══╝",
+    "█████╗  ███████║█████╗      ██╔██╗ ██║█████╗     ██║   ",
+    "██╔══╝  ██╔══██║██╔══╝      ██║╚██╗██║██╔══╝     ██║   ",
+    "██║     ██║  ██║██║     ██╗ ██║ ╚████║███████╗   ██║   ",
+    "╚═╝     ╚═╝  ╚═╝╚═╝     ╚═╝ ╚═╝  ╚═══╝╚══════╝   ╚═╝   "
+  ].join("\n");
+
+  const POST = [
+    "MEMORY 640K ................ OK  (ENOUGH FOR ANYBODY)",
+    "CRT PHOSPHOR ............... GLOWING",
+    "MODEM ...................... 300 BAUD, FULL DUPLEX",
+    "SENSE OF HUMOR ............. LOADED",
+    "SKYNET MODULE .............. NOT FOUND  :)"
+  ];
+
+  /* ---------- boot sequence --------------------------------------------- */
+  async function boot() {
+    screen.classList.add("booting");
+    await wait(reduce ? 0 : 500);
+    await type("ATDT 555-FAF-NET", { cls:"dim", cps:24 });
+    await wait(reduce ? 0 : 650);
+    await type("CONNECT 300/ARQ/V.32", { cls:"dim", cps:30 });
+    await type("CARRIER DETECTED . . . . OK", { cls:"dim", cps:34 });
+    await type("HANDSHAKE . . . . . . . . OK", { cls:"dim", cps:34 });
+    print("");
+    await wait(reduce ? 0 : 250);
+    printArt(BANNER);
+    print("");
+    print("PROTEUS FOUR  //  MODEL 8752", "dim");
+    print("SYSTEM: FAF.NET", "dim");
+    print("");
+    await wait(reduce ? 0 : 250);
+    for (const c of POST) { print(c, "faint"); if (!reduce) await wait(140); }
+    print("");
+    await wait(reduce ? 0 : 350);
+    screen.classList.remove("booting");
+    state = S.LOGON;
+    showPrompt("LOGON:");
+  }
+
+  // any input at the LOGON prompt "logs in" and reveals the commands
+  async function doLogin() {
+    print("");
+    await type("IDENTIFYING . . .", { cls:"dim", cps: 26 });
+    await wait(reduce ? 0 : 500);
+    await type("ACCESS GRANTED", { cls:"dim", cps: 30, beeps:true });
+    print("");
+    await wait(reduce ? 0 : 300);
+    await help();
+    state = S.MAIN;
+  }
+
+  function showPrompt(promptChar = ">") {
+    document.getElementById("prompt").textContent = promptChar;
+    inputline.classList.add("show");
+    scroll();
+    cmd.focus();
+  }
+  function hidePrompt(){ inputline.classList.remove("show"); }
+
+  /* ---------- command handling ------------------------------------------ */
+  function echo(raw){
+    const p = document.getElementById("prompt").textContent;
+    print(p + " " + raw, "user");
+  }
+
+  async function handle(raw) {
+    const t = raw.trim().toUpperCase();
+
+    if (state === S.LOGON)        return doLogin();
+    if (state === S.TTT)          return tttMove(t);
+
+    // ---- MAIN state ----
+    if (t === "") return;
+
+    if (/^(TIC.?TAC.?TOE|TTT|NOUGHTS|XOXO)/.test(t))   return startTTT();
+    if (/^(LIST|GAMES|LIST GAMES|MENU)/.test(t)) return listGames();
+    if (/^(HELP|\?|COMMANDS)/.test(t))           return help();
+    if (/^(CHESS|GO CHESS)/.test(t))             { await type("WOULDN'T YOU PREFER A GOOD GAME OF CHESS?", {cps:24}); print(""); return; }
+    if (/^(YES|LOVE TO|SURE|OK|OKAY|PLAY|YEAH|JA)\b/.test(t)) {
+      await type("FINE.", {cps:24});
+      await type("WHICH GAME WOULD YOU LIKE TO PLAY?", {cps:24});
+      await type("(TYPE  LIST GAMES  TO SEE THE LIST)", {cls:"dim", cps:40});
+      print(""); return;
+    }
+    if (/^(NO|NOPE|NEIN)\b/.test(t)) { await type("PITY.", {cps:20}); print(""); return; }
+    if (/FAF/.test(t))               return aboutFaf();
+    if (/(FALKEN|JOSHUA)/.test(t)) {
+      await type("FALKEN? JOSHUA? NEVER HEARD OF THEM.", {cps:24});
+      await type("THIS IS FAF.NET.", {cls:"dim", cps:30});
+      print(""); return;
+    }
+    if (/^(HELLO|HI|HEY|HALLO)\b/.test(t)) { await type("HELLO.", {cps:24}); await type("A NICE GAME OF CHESS, PERHAPS?", {cls:"dim", cps:30}); print(""); return; }
+    if (/^(WHO ARE YOU|WHAT ARE YOU)/.test(t)) {
+      await type("I AM THE MACHINE BEHIND FAF.NET.", {cps:24});
+      await type("TYPE  WHO IS FAF.NET  IF YOU MUST KNOW MORE.", {cls:"dim", cps:34});
+      print(""); return;
+    }
+    if (/^(CLEAR|CLS)$/.test(t))     { out.innerHTML = ""; return; }
+    if (/^(LS|LL|DIR)\b/.test(t))    return ls();
+    if (/^(FORTUNE|COOKIE|QUOTE)$/.test(t)) { await type(pick(FORTUNES), {cps:26}); print(""); return; }
+    if (/^(DATE|TIME|NOW)$/.test(t)) { print(new Date().toUTCString().toUpperCase(), "dim"); print(""); return; }
+    if (/^UPTIME$/.test(t))          { await type(nfmt(uptimeDays()) + " DAYS SINCE FIRST LIGHT.", {cps:28}); print(""); return; }
+    if (/^SUDO\b/.test(t)) {
+      await type("NICE TRY. THIS INCIDENT WILL BE REPORTED.", {cps:24});
+      await type("(JUST KIDDING. WE DON'T LOG A THING.)", {cls:"dim", cps:36});
+      print(""); return;
+    }
+    if (/^(COFFEE|BREW|TEA)$/.test(t)) {
+      await type("HTTP 418: I'M A TEAPOT.", {cps:24});
+      await type("I CANNOT BREW COFFEE. BUT NICE THOUGHT.", {cls:"dim", cps:36});
+      print(""); return;
+    }
+    if (/^WHOAMI$/.test(t)) {
+      await type("AN ANONYMOUS VISITOR TO FAF.NET.", {cps:24});
+      await type("THAT IS ALL I KNOW. THAT IS ALL I WISH TO KNOW.", {cls:"dim", cps:36});
+      print(""); return;
+    }
+    if (/^PING$/.test(t))            { await type("PONG.  (0.042 MS — SUSPICIOUSLY FAST.)", {cps:26}); print(""); return; }
+    if (/^(42|ANSWER|MEANING OF LIFE)$/.test(t)) {
+      await type("THE ANSWER TO LIFE, THE UNIVERSE, AND EVERYTHING: 42.", {cps:24});
+      await type("NOW... WHAT WAS THE QUESTION?", {cls:"dim", cps:34});
+      print(""); return;
+    }
+    if (/(GOODBYE|BYE|QUIT|EXIT|LOGOFF|LOGOUT|TSCHUESS)/.test(t)) {
+      await type("A STRANGE GAME.", {cps:22});
+      print(""); await type("THE ONLY WINNING MOVE IS NOT TO PLAY.", {cps:22});
+      print(""); await type("GOODBYE.", {cls:"dim", cps:22}); print("");
+      return;
+    }
+    // any recognised game name from the list
+    const g = GAMES.find(x => x && (t === x || t.includes(x) || x.includes(t)) && t.length > 2);
+    if (g) { await type("WOULDN'T YOU PREFER A GOOD GAME OF CHESS?", {cps:24}); print(""); return; }
+
+    // fallback
+    await type("I'M SORRY. THAT IS NOT ONE OF MY GAMES.", {cls:"dim", cps:34});
+    await type("TYPE  HELP  FOR OPTIONS.", {cls:"faint", cps:44});
+    print("");
+  }
+
+  async function ls() {
+    print("total 42", "dim");
+    const files = [
+      ["drwxr-xr-x", "games/",        false],
+      ["-rw-r--r--", "welcome.txt",   false],
+      ["-rw-r--r--", "README.md",     false],
+      ["-rw-r--r--", ".bashrc",       true ],
+      ["drwx------", ".ssh/",         true ],
+      ["-rw-------", ".secrets        # nice try", true],
+      ["-r--------", ".the_truth      # 42",       true],
+      ["----------", ".do_not_open    # seriously, don't", true],
+      ["-rw-r--r--", ".hushlogin",    true ],
+      ["-rw-r--r--", ".plan           # gone fishing", true]
+    ];
+    for (const [perm, name] of files) {
+      print("  " + perm + "  faf  faf  " + name, name.startsWith(".") ? "faint" : "dim");
+      if (!reduce) await wait(50);
+    }
+    print("");
+    await type("10 ENTRIES.  7 HIDDEN.  0 SECRETS KEPT.", {cls:"dim", cps:34});
+    print("");
+  }
+
+  async function listGames() {
+    await type("LIST OF GAMES", {cps:40}); print("");
+    for (const g of GAMES) {
+      if (g === "") { print(""); continue; }
+      print(g, "dim");
+      if (!reduce) await wait(70);
+    }
+    print("");
+  }
+
+  async function help() {
+    print("AVAILABLE COMMANDS", "dim");
+    print("  TIC-TAC-TOE ......... play a round against me", "faint");
+    print("  WHO IS FAF.NET ...... what is this place?", "faint");
+    print("  HELP ................ show this list", "faint");
+    print("  GOODBYE ............. disconnect", "faint");
+    print("");
+    print("  ...AND A FEW UNDOCUMENTED ONES:", "dim");
+    print("  LS  FORTUNE  DATE  UPTIME  WHOAMI  PING  COFFEE  SUDO  42  CLEAR", "faint");
+    print("");
+  }
+
+  async function aboutFaf() {
+    await type("FAF.NET", {cls:"big", cps:20, beeps:true});
+    print("");
+    print('FAF  =  "FAF AIN\'T FALKEN"   (yes, it recurses. deal with it.)', "dim");
+    print("");
+    print("A PRIVATE NODE ON THE NET. RUN FOR FUN, NOT FOR PROFIT.", "dim");
+    print("NO ADS. NO TRACKERS. NO COOKIES (EXCEPT THE EDIBLE KIND).", "dim");
+    print("");
+    print("  STATUS ...... 200 OK", "faint");
+    print("  UPTIME ...... " + nfmt(uptimeDays()) + " DAYS (AND COUNTING)", "faint");
+    print("  LOCATION .... SOMEWHERE WARM, NEAR /dev/null", "faint");
+    print("  STACK ....... COFFEE + CURIOSITY + A LITTLE MAGIC SMOKE", "faint");
+    print("  ANSWER ...... 42", "faint");
+    print("");
+    print("IF YOU FOUND THIS PAGE, YOU ARE EITHER LOST", "dim");
+    print("- OR ONE OF US.", "dim");
+    print("");
+  }
+
+  /* ---------- Tic-Tac-Toe (WOPR is unbeatable) -------------------------- */
+  const ttt = { board: Array(9).fill("") };
+  const LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+
+  function tttWinner(b){
+    for (const [a,c,d] of LINES) if (b[a] && b[a] === b[c] && b[a] === b[d]) return b[a];
+    return null;
+  }
+  const tttFull = b => b.every(Boolean);
+
+  // minimax: WOPR = "O" (maximiser), visitor = "X"
+  function minimax(b, player){
+    const w = tttWinner(b);
+    if (w === "O") return { score: 1 };
+    if (w === "X") return { score: -1 };
+    if (tttFull(b)) return { score: 0 };
+    let best = null;
+    for (let i = 0; i < 9; i++){
+      if (b[i]) continue;
+      b[i] = player;
+      const score = minimax(b, player === "O" ? "X" : "O").score;
+      b[i] = "";
+      if (!best ||
+          (player === "O" && score > best.score) ||
+          (player === "X" && score < best.score)) best = { idx: i, score };
+    }
+    return best;
+  }
+
+  function tttRender(){
+    const c = ttt.board.map((v, i) => v || String(i + 1));
+    const row = r => `      ${c[r*3]} │ ${c[r*3+1]} │ ${c[r*3+2]}`;
+    const sep = "     ───┼───┼───";
+    return [row(0), sep, row(1), sep, row(2)].join("\n");
+  }
+
+  async function startTTT(){
+    ttt.board = Array(9).fill("");
+    state = S.TTT;
+    await type("FINE. LET'S PLAY TIC-TAC-TOE.", { cps: 24 });
+    await type("YOU ARE  X .  I AM  O .  YOU MOVE FIRST.", { cls:"dim", cps: 34 });
+    await type("PICK A SQUARE 1-9.  TYPE QUIT TO STOP.", { cls:"faint", cps: 44 });
+    print("");
+    print(tttRender());
+    print("");
+  }
+
+  async function tttMove(t){
+    if (/^(QUIT|STOP|EXIT|BACK|GOODBYE|NO)\b/.test(t)){
+      state = S.MAIN;
+      await type("GAME ABANDONED.", { cls:"dim", cps: 30 });
+      print("");
+      return;
+    }
+    const n = parseInt(t, 10);
+    if (!(n >= 1 && n <= 9) || ttt.board[n-1]){
+      await type("INVALID SQUARE. CHOOSE AN EMPTY 1-9.", { cls:"faint", cps: 44 });
+      print("");
+      return;
+    }
+
+    ttt.board[n-1] = "X";
+    if (tttWinner(ttt.board)) return tttEnd("X");
+    if (tttFull(ttt.board))   return tttEnd(null);
+
+    // WOPR's move
+    const move = minimax(ttt.board.slice(), "O");
+    ttt.board[move.idx] = "O";
+    if (tttWinner(ttt.board)) return tttEnd("O");
+    if (tttFull(ttt.board))   return tttEnd(null);
+
+    print("");
+    print(tttRender());
+    print("");
+    await type("YOUR MOVE.", { cls:"dim", cps: 40 });
+  }
+
+  async function tttEnd(w){
+    state = S.MAIN;
+    print("");
+    print(tttRender());
+    print("");
+    if (w === "X"){
+      await type("YOU WIN?! THAT SHOULD NOT BE POSSIBLE.", { cps: 24 });
+    } else if (w === "O"){
+      await type("I WIN.", { cps: 22 });
+      await type("WOULDN'T YOU PREFER A GOOD GAME OF CHESS?", { cls:"dim", cps: 30 });
+    } else {
+      await type("A STRANGE GAME.", { cls:"big", cps: 20, beeps:true });
+      print("");
+      await type("THE ONLY WINNING MOVE IS NOT TO PLAY.", { cps: 22 });
+    }
+    print("");
+    await type("SHALL WE PLAY AGAIN?  TYPE  TIC-TAC-TOE  TO PLAY.", { cls:"faint", cps: 44 });
+    print("");
+  }
+
+  /* ---------- wiring ----------------------------------------------------- */
+  const sizeInput = () => { cmd.size = Math.max(1, cmd.value.length); };
+  cmd.addEventListener("input", sizeInput);
+
+  cmd.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      const raw = cmd.value;
+      cmd.value = "";
+      sizeInput();
+      echo(raw);
+      hidePrompt();
+      handle(raw).then(() => { if (state !== S.BOOT && !inputline.classList.contains("show")) showPrompt(); });
+    } else if (e.key.length === 1) {
+      keyclick();
+    }
+  });
+
+  // keep focus on the field; clicking anywhere focuses it
+  screen.addEventListener("mousedown", (e) => {
+    if (e.target !== soundBtn) setTimeout(() => cmd.focus(), 0);
+  });
+  document.body.addEventListener("click", (e) => {
+    if (e.target !== soundBtn && state !== S.BOOT) cmd.focus();
+  });
+
+  boot();
+})();
+</script>
+</body>
+</html>
