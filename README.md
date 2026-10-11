@@ -1,22 +1,24 @@
-# faf.net — Amiga Workbench 1.3 im Browser
+# faf.net — Amiga Workbench 1.3 in the browser
 
-Wer https://faf.net aufruft, landet auf einem nachgebauten **Amiga-Workbench-1.3-Desktop**:
-AmigaDOS-Boot, Fenster, Schubladen, Menüs, Topaz-Schrift, Originalpalette — alles in einer
-einzigen HTML-Datei, gezeichnet auf einem Canvas mit echtem Hires-Raster (Pixel doppelt so
-hoch wie breit). Keine Frameworks, kein Build-Schritt, keine Tracker.
+**English** · [Deutsch](README.de.md)
 
-## Dateien
+Visit https://faf.net and you land on a recreated **Amiga Workbench 1.3 desktop**:
+AmigaDOS boot, windows, drawers, menus, the Topaz font and the original palette — all in a
+single HTML file, drawn on a canvas with a true hires raster (pixels twice as tall as they are
+wide). No frameworks, no build step, no trackers.
 
-| Datei | Inhalt |
+## Files
+
+| File | Contents |
 |---|---|
-| `index.html` | die Workbench (HTML/CSS/JS inline, Topaz-8 eingebettet) |
-| `wopr.html` | WOPR-Terminal aus *WarGames* (1983) — grüner CRT-Look, Tic-Tac-Toe gegen eine unschlagbare KI |
-| `kickstart13.png` | die Workbench-1.3-Diskette mit Hand, im Fenster „Kickstart 1.3“ |
-| `v1/` | erster Stand der Workbench (Sicherung) |
+| `index.html` | the Workbench (HTML/CSS/JS inline, Topaz 8 embedded) |
+| `wopr.html` | the WOPR terminal from *WarGames* (1983) — green CRT look, tic-tac-toe against an unbeatable AI |
+| `kickstart13.png` | the Workbench 1.3 disk in hand, shown in the "Kickstart 1.3" window |
+| `v1/` | the first version of the Workbench (backup) |
 
-**Deployment:** `index.html`, `wopr.html` und `kickstart13.png` ins Web-Root, fertig.
+**Deployment:** copy `index.html`, `wopr.html` and `kickstart13.png` to the web root. Done.
 
-## Was drin ist
+## What's inside
 
 ```
  Desktop   faf.net · RAM DISK · DF1:NDOS · WOPR
@@ -28,39 +30,42 @@ hoch wie breit). Keine Frameworks, kein Build-Schritt, keine Tracker.
  Games     Caves
 ```
 
-- **Workbench:** Fenster ziehen, skalieren, schließen, Tiefe; Icons auswählen (Komplementfarben,
-  Schubladen ziehen sich auf) und per Doppelklick öffnen; Rechtsklick-Menü (Touch: Titelleiste
-  antippen) mit Clean Up, Version u. a.; Amiga-Mauszeiger samt „Zz“-Wolke.
-- **Palette:** Icon „Workbench“ schaltet die vier Farbregister zwischen Original 1.3 und dem
-  Workbench Design 1.0 (github.com/faf-net/workbench) um.
-- **Speicher wie auf einem A500 mit 512K Chip-RAM:** Fenster kosten Speicher; wird es knapp,
-  kommt „Not enough memory“, beim dritten Versuch in Folge eine Guru Meditation.
+- **Workbench:** drag, resize, close and depth-arrange windows; select icons (complement
+  colours, drawers slide open) and open them with a double-click; right-click menu (touch: tap
+  the title bar) with Clean Up, Version and more; the Amiga pointer including the "Zz" cloud.
+- **Palette:** the "Workbench" icon switches the four colour registers between the original
+  1.3 colours and **Workbench Design 1.0** — a personal design system in warm, muted colours
+  with a single amber accent, named after the Amiga's operating system
+  ([faf-net/workbench](https://github.com/faf-net/workbench)).
+- **Memory like an A500 with 512K chip RAM:** windows cost memory; when it runs low you get
+  "Not enough memory", and on the third attempt in a row a Guru Meditation.
 - **AmigaShell:** `help`, `dir`, `info`, `avail`, `date`, `type about`, `version`, `xcopy`,
   `virusx`, `sysinfo`, `caves`, `reboot`, `sound off|on`, `guru` …
-- **Clock** mit Rauten, Rautenzeigern und Datum; **Kickstart**-Bild im Fenster.
-- **X-Copy:** Nachbau des Original-Bildschirms (Cachet 1988) mit Modi, START/END,
-  Laufwerken und Spurrastern; COPY nach DF1: macht aus der NDOS-Diskette eine Kopie.
-- **Viren (harmlos, nur per Doppelklick):** **SCA** (1987) mit Originalmeldung; **Byte Bandit**
-  (1988) — Bildschirm wird dunkel, Tastatur „tot“, Bootblock-String glimmt auf. **VirusX**
-  findet und entfernt beide.
-- **DF1:NDOS** → Requester „Not a DOS disk“.
-- **SysInfo:** ein A500 neben dem Rechner des Besuchers (nichts verlässt den Browser).
-- **DIAMOND CAVES:** Höhlenspiel im Stil von Boulder Dash — graben, Diamanten, fallende
-  Felsen, Glühwürmchen und Schmetterlinge, erzeugte Höhlen mit steigender Schwierigkeit,
-  Highscore im Browser. Pfeiltasten/WASD, Leertaste, R, Esc; am Handy Wischen oder Steuerkreuz.
-- **WOPR** auf dem Desktop führt zum WarGames-Terminal.
+- **Clock** with diamond markers, diamond-shaped hands and the date; the **Kickstart** picture
+  in a window.
+- **X-Copy:** a recreation of the original screen (Cachet, 1988) with modes, START/END, drives
+  and track grids; COPY to DF1: turns the NDOS disk into a copy.
+- **Viruses (harmless, double-click only):** **SCA** (1987) with its original message;
+  **Byte Bandit** (1988) — the screen goes dark, the keyboard "dies", the bootblock string
+  glows up. **VirusX** finds and removes both.
+- **DF1:NDOS** → the "Not a DOS disk" requester.
+- **SysInfo:** an A500 next to the visitor's machine (nothing leaves the browser).
+- **DIAMOND CAVES:** a cave game in the spirit of Boulder Dash — digging, diamonds, falling
+  boulders, fireflies and butterflies, generated caves of rising difficulty, high scores kept
+  in the browser. Arrow keys/WASD, space, R, Esc; on phones swipe or use the on-screen pad.
+- **WOPR** on the desktop leads to the WarGames terminal.
 
-## Herkunft und Rechte
+## Credits and rights
 
-- **Topaz a500** (Kickstart 1.x) als Bitmap von dMG/t!s^dS!, rewtnull/amigafonts,
-  GPL mit Font-Ausnahme; Topaz © Amiga Inc.
-- Icons, Fenster, X-Copy-Bildschirm, Spielgrafik und Töne sind selbst gezeichnet bzw. per
-  WebAudio erzeugt. X-Copy, SCA, Byte Bandit, VirusX und Boulder Dash sind Hommagen;
-  deren Namen und Marken gehören den jeweiligen Rechteinhabern.
-- Beschreibung der Viren nach der Amiga Virus Encyclopedia (vht-dk.dk).
-- `kickstart13.png` zeigt die Kickstart-1.3-Grafik (© Commodore-Amiga) als Zitat.
+- **Topaz a500** (Kickstart 1.x) bitmap by dMG/t!s^dS!, rewtnull/amigafonts, GPL with font
+  exception; Topaz © Amiga Inc.
+- Icons, windows, the X-Copy screen, game graphics and sounds are hand-drawn or generated with
+  WebAudio. X-Copy, SCA, Byte Bandit, VirusX and Boulder Dash are homages; their names and
+  trademarks belong to their respective owners.
+- Virus behaviour as described by the Amiga Virus Encyclopedia (vht-dk.dk).
+- `kickstart13.png` shows the Kickstart 1.3 artwork (© Commodore-Amiga) as a quotation.
 
-## Lizenz
+## License
 
-Eigener Code und eigene Grafik: **MIT** (siehe `LICENSE`, Fremdanteile in `NOTICE`). Ausgenommen sind die Topaz-Schrift
-(GPL mit Font-Ausnahme) und `kickstart13.png` (© Commodore-Amiga).
+Own code and own graphics: **MIT** (see `LICENSE`, third-party parts in `NOTICE`). Excluded are
+the Topaz font (GPL with font exception) and `kickstart13.png` (© Commodore-Amiga).
