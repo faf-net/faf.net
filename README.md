@@ -59,3 +59,8 @@ hoch wie breit). Keine Frameworks, kein Build-Schritt, keine Tracker.
   deren Namen und Marken gehören den jeweiligen Rechteinhabern.
 - Beschreibung der Viren nach der Amiga Virus Encyclopedia (vht-dk.dk).
 - `kickstart13.png` zeigt die Kickstart-1.3-Grafik (© Commodore-Amiga) als Zitat.
+
+## Lizenz
+
+Eigener Code und eigene Grafik: **MIT** (siehe `LICENSE`). Ausgenommen sind die Topaz-Schrift
+(GPL mit Font-Ausnahme) und `kickstart13.png` (© Commodore-Amiga).
