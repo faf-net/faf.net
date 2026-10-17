@@ -389,7 +389,7 @@ const metrics = w => w.type === "drawer" ? { L: w.gauge ? 18 : 4, R: 18, T: 11, 
 function content(w) { const m = metrics(w); return { x: w.x + m.L, y: w.y + m.T, w: w.w - m.L - m.R, h: w.h - m.T - m.B }; }
 
 function layoutIcons(w) {
-  const c = content(w), cell = 78, cols = Math.max(1, Math.floor((c.w - 8) / cell));
+  const c = content(w), cell = w.cell || 78, cols = Math.max(1, Math.floor((c.w - 8) / cell));
   if (w.rows) {                                 // fixed rows, e.g. tools on top, drawers below
     let i = 0;
     w.rows.forEach((n, r) => { for (let k = 0; k < n && i < w.icons.length; k++, i++) { w.icons[i].cx = 4 + (cell >> 1) + k * cell; w.icons[i].y = 4 + r * 36; } });
@@ -425,10 +425,10 @@ const cascade = () => wins.length * 14;
 function openDisk(id = "disk") {
   openWin({ id, title:"faf.net", type:"drawer", gauge:true, fill:.79, mem:18432,
     x: (LW < 520 ? 6 : Math.floor(LW * .1)) + (id === "disk" ? 0 : 24), y: 22 + (id === "disk" ? 0 : 16), w: 278, h: 136,
-    rows: [3, 3, 3],                          // About · GitHub · Workbench / System · Utilities · Games / PGP Key · King Tut · Trashcan
+    rows: [3, 3, 2],                          // About · GitHub · Workbench / System · Utilities · Games / PGP Key · Trashcan
     icons: [ mkIcon("About", "doc", openAbout), mkIcon("GitHub", "github", goGithub), mkIcon("Workbench", "palette", toggleTheme),
              mkIcon("System", "drawer", openSystem), mkIcon("Utilities", "drawer", openUtil), mkIcon("Games", "drawer", openGames),
-             mkIcon("PGP Key", "pgp", () => openPGP()), mkIcon("King Tut", "tut", openTut), mkIcon("Trashcan", "trash", openTrash) ] });
+             mkIcon("PGP Key", "pgp", () => openPGP()), mkIcon("Trashcan", "trash", openTrash) ] });
 }
 function openSystem() {
   openWin({ id:"system", title:"System", type:"drawer", gauge:false, mem:12288, x:50 + cascade(), y:40 + cascade(), w:344, h:64,
@@ -451,13 +451,11 @@ function drawPicture(c) {
   ctx.imageSmoothingEnabled = false;
 }
 /* ---------- screens: every screen can be pulled down by its title bar ------- */
-// Back to front. The Workbench is one screen; a picture opens on a screen of its own,
-// as ShowIFF and Deluxe Paint did, and you can drag it down to look behind it.
+// Back to front. The Workbench is one screen; programs that want the whole display open
+// one of their own, and you can drag it down to look behind it.
 const scrBuf = document.createElement("canvas");
 const sctx = scrBuf.getContext("2d", { alpha:false, willReadFrequently:true });
-const laceBuf = document.createElement("canvas");          // interlace screens: LW x 2·LH
-const lctx = laceBuf.getContext("2d", { alpha:false });
-const titleH = s => s.lace ? 5 : 10;                       // title bar height in Workbench lines
+const titleH = () => 10;                                   // title bar height (an interlace screen would have 5)
 let screens = [{ id:"wb", y:0 }];
 const scrOf = id => screens.find(s => s.id === id);
 const wbY = () => scrOf("wb").y;
@@ -466,175 +464,59 @@ function scrFront(s) { screens.splice(screens.indexOf(s), 1); screens.push(s); }
 function scrBack(s)  { screens.splice(screens.indexOf(s), 1); screens.unshift(s); }
 function closeScr(id) { screens = screens.filter(s => s.id !== id); }
 
-/* ---------- Tutankhamun: text art on its own screen ------------------------ */
-// Drawn anew from the real mask (Cairo, c. 1323 BC) as 51 x 60 Topaz cells on a hires
-// interlace screen (twice the lines, as Deluxe Paint used for fine pictures), each with
-// a glyph, a pen and a paper colour from the four registers. A tribute to Avril
-// Harrison's Deluxe Paint picture of 1986, not a copy of it.
-// TUT_COL: one hex digit per cell = pen * 4 + paper (0 blue, 1 white, 2 black, 3 orange).
-const TUT_TXT = [
-  "                                                   ",
-  "                   @_~~~~x~~~~&?                   ",
-  "                 @@ %....&    @.?_                 ",
-  "                 ~  &....&    &..~                 ",
-  "                @   #....&_   %...W                ",
-  "                %   -....&    ~...-_               ",
-  "               @%    ....%~   ....@_               ",
-  "               ~&    %...%#  x....O/_              ",
-  "              @...   %.x_W&  #....-._              ",
-  "              ~..%   &.~#]&  &...@../_             ",
-  "             @...&   #._#]&  %...O...%             ",
-  "            @&....   -.&#]&  %...~...^_            ",
-  "            @-0___%   _#x&&  ___#  -=_?            ",
-  "           @~           . &           %_           ",
-  "          @~=ooxoooxxoxxox#xxxoooooxoo%~_          ",
-  "         _~?--.?...0x%%^~~~^%%%#  .^...@/_         ",
-  "        _~..%-..%..@%~       ~%%. @...@--#_        ",
-  "       @~...._..?.@%=         =%%.^...~--x-_       ",
-  "      @~~%...?...8%%_         __%@...O---o~/_      ",
-  "     @%__=_...8.x~~..~?_   _@~..~?..@---@-__/?     ",
-  "    _....0_%..._O._@@_..   .._@@_..=___@......_    ",
-  "   _~----------_x%=-  ~?   ^~  -=?o_----------~_   ",
-  "   @=~~~~~~~_~~=%@@oM?_     @oMo?_%%~~_~~~~~~~=&_  ",
-  "  x====____x8%_&.@~@~0?#   0~@~?~?.#_o8%____====%  ",
-  " @.........O@%%W8~ ].& &% x& &.# ~8&x%O&.........? ",
-  " -.-------=#.]&%8?_W@0@#   0_#_x_^@&@&.8_-------.- ",
-  "#%===~~~~~]&.&x%=~?@@@~ o x ~@@@^~=%%%.]%~~~~~====0",
-  "#======___]&.&x%%       & ]       =%%%.]%___======]",
-  "#.........]&.@x%%.     x% x%     .=%%%.M%.........W",
-  "@..-------x%_O@8%==.   @% -%   .==%&%/_%%-------..]",
-  "]====~~~~~=%_=%$%%==.  @   &  .==%%%$%_x%~~~~~====[",
-  "]======____8%W%]%%%=.  0   #  .=%%%%=&#8____======&",
-  "-..........~8^.~8%%=- _~,_@~_ -=%%8~.?O~..........-",
-  "~..------------x88%=- /_[8?@~ -=%88o------------..-",
-  "W==~~~~~~~~~~~~=88%%=.  xoo  .==%8O%~~~~~~~~~~~~==&",
-  "]===._____.____x%8%%=._@@@@__.==%8%%____..____.===&",
-  "-..&~.....&....W%%%%==@~~oo~?==%8%%&....]~....~%..-",
-  "~..#_----.&----W%%8%%==~~^~~==%%%%%&----@_----#%..-",
-  "W===~~~~~~-~~~~=%%%8%%==   ==%%%%%%%~~~~-~~~~~~===&",
-  "]===._____.____x%%%%%%%%@o@%%%%%%%%%____..____.===&",
-  "-..&~.....&....W%%%%%%%%@_?%%%%%%%%&....]~....~%..-",
-  "%..#_----.&----W%%%%%%%=@.0=%%%%%%%&----@_----#%..-",
-  "]===~~~~~~-~~~~=%%%%%%%#@~_%%%%%%%%%~~~~-~~~~~~===&",
-  "]===._____.____x%%%%%%%%~@/%%%%%%%%%____..____.===%",
-  "]..&~.....&....W%%%%%%%%~_/=%%%%%%%&....]~....~%..[",
-  "&__&_----.8__..8%%%@@@@0^_?#@@@0%%%&..__@_----#%__&",
-  "&%%#~~~~~~-%%_..8==/___[@.0%__@~==@..@o%-~~~~~~0x%@",
-  "&?8'._____@_8%_..?0===8~0~0?O=%=@~..@o8@&.____.'8}]",
-  "&&8[~.....&._8%?_..~8@==.@_==_@~.._~88@.]~....~]8@@",
-  "&._[_----.&..?88o?_...~?~_&~~..._@x8O@..M_----#]@.@",
-  "@./_~~~~~~=%..?_88%~__.#^_?%._@~o88@~..@=~~~~~~_~.]",
-  "^_.#.______^/_..?_888%o~_@_~x%888@~.._&)..____.&.@~",
-  "?/_/~.....@x=~o_..~?_88888888O_@~..-@?/0O~....~^_%%",
-  "x_/_..---_..&/>]0_....~~~~~~~~..._@%%<@~.__--...&/]",
-  "/&_/_~?.xo_..?0^[/?@_........._@[ii)@~..@xo.^~.&/@~",
-  " &&_/_./_8%?_..~00%%%%~oooo??]]]=#@~.._~88@~._&/@~ ",
-  "  &&_^_..?88%?_...~@###%%%#####@~~.._^o8O@..@8_@~  ",
-  "   /x_^%..?_88%~_.....~~~~~~~.....@~o88@~..@}_/~   ",
-  "    /?_^]_..~_88%o~___.......-_@~x888@~.._O>_/~    ",
-  "      _#^/o,..?_*888%oo~~~~~xx%888/@~...@%]_~      ",
+/* ---------- Windows95.exe: found in the Trashcan ---------------------------- */
+// Runs anyway if you insist, and crashes on a screen of its own, VGA blue on an Amiga:
+// drag it down by its (invisible) title bar and the Workbench is still there behind it.
+const BSOD = [
+  "A fatal exception 0E has occurred at 0028:C0FFEE00 in VXD AMIGA(01) + 00000500. The current application will be terminated.",
+  "",
+  "*  Press any key to terminate the current application.",
+  "*  Press CTRL+ALT+DEL again to restart your computer. You will lose any unsaved information in all applications."
 ];
-const TUT_COL = [
-  "000000000000000000000000000000000000000000000000000",
-  "00000000000000000003e2222e3333e20000000000000000000",
-  "000000000000000002bfe2222bffffe22800000000000000000",
-  "000000000000000003ffe2222bffffe22200000000000000000",
-  "00000000000000003fffe2222b7fffe22280000000000000000",
-  "0000000000000000bfffb222295fffe22228000000000000000",
-  "0000000000000002bffff2222b7fff2222be000000000000000",
-  "00000000000000023ffffe222bbffb2222bb800000000000000",
-  "00000000000000222bfffe2eeb3ffe2222bbe00000000000000",
-  "00000000000000222bfffe2bee3ffe2223bbb80000000000000",
-  "000000000000022223fffe2bee3ffe222bbbbe0000000000000",
-  "0000000000002e2222fffb2bee3ffe222bbbbe8000000000000",
-  "000000000000bb3eeebfffebbb3ffeeebffbbe2000000000000",
-  "000000000002bfffffffffffbf3fffffffffffe800000000000",
-  "000000000023bbbbbbbbbbbbbbbbbbbbbbbbbbe2c0000000000",
-  "00000000082ebbbb222ebbbbbbbbbbebffbe222bbc000000000",
-  "000000008222bbbbe22bbbfffffffbbbbfe2223bbe800000000",
-  "0000000222222bbbb2bbbfffffffffbbbbe22ebbbb280000000",
-  "0000002bbe222ebbbbbbbfffffffffbbbe222bbbbbbbe000000",
-  "000002bbbbe222ebbee22ee3fff3ee22ee22bbbbeebbb200000",
-  "000082222e3e2223e2ebbe22fff22ebbe22e333e22222280000",
-  "000822222222222eebbbffb3fff3bffbbbee222222222228000",
-  "000bbbbbbbbbbbbbbee3be3fffffe3b3e3bbbbbbbbbbbbbe800",
-  "00ebbbbbbbbbbbbe2116671bfffb1767932bbbbbbbbbbbbbe00",
-  "02222222222bebeb3d532956bfb956215d3eebee22222222220",
-  "0222222222ee2eebb616376bfffb376716bebe2ee2222222220",
-  "2bbbbbbbbbbe23bbbb3bbb3fbfbf3bbb3bbbbe2ebbbbbbbbbb2",
-  "2bbbbbbbbbbe23bbbfffffffbfbfffffffbbbe2ebbbbbbbbbb2",
-  "2222222222ee2bbbbbfffffbbfbbfffffbbbbe2be2222222228",
-  "2222222222ebebeebbbbfffebfbbfffbbbbebbebe2222222222",
-  "ebbbbbbbbbbbbbbbbbbbbffefffbffbbbbbbbbbbbbbbbbbbbbe",
-  "ebbbbbbbbbbbebbbbbbbbffbfffbffbbbbbbbe3bbbbbbbbbbbe",
-  "22222222222eee2eebbbbfbe37eebfbbbbee2eee22222222222",
-  "222222222222222ebbbbbfbeb7b3bfbbbbbe222222222222222",
-  "bbbbbbbbbbbbbbbbbbbbbbffbbbffbbbbbbbbbbbbbbbbbbbbbe",
-  "ebbbbbbbbbbbbbbbbbbbbbbeeee33bbbbbbbbbbbbbbbbbbbbbe",
-  "2223e22222e2222bbbbbbbb3b7733bbbbbbe2222ee2222ee222",
-  "222be22222e2222bbbbbbbb77777bbbbbbbe2222be22223e222",
-  "bbbbbbbbbbbbbbbbbbbbbbbbfffbbbbbbbbbbbbbbbbbbbbbbbe",
-  "ebbbbbbbbbbbbbbbbbbbbbbbebebbbbbbbbbbbbbbbbbbbbbbbe",
-  "2223e22222e2222bbbbbbbbbbb3bbbbbbbbe2222ee2222ee222",
-  "222be22222e2222bbbbbbbbbe2ebbbbbbbbe2222be22223e222",
-  "ebbbbbbbbbbbbbbbbbbbbbbe3bebbbbbbbbbbbbbbbbbbbbbbbc",
-  "ebbbbbbbbbbbbbbbbbbbbbbbbebbbbbbbbbbbbbbbbbbbbbbbbe",
-  "e223e22222e2222bbbbbbbbbeeebbbbbbbbe2222ee2222ee22e",
-  "36e3e22222b6e22ebbbeeeee3b3eeeeebbbe22e6be22223ee6e",
-  "377bbbbbbb777622ebbbec82e2ec8c33bbe223777bbbbbbb77c",
-  "277bbbbbbbeb77622eebbbb33b33bbbbee22b776bbbbbbbb772",
-  "2b77e22222e2377be22eeebbbebbbbee22e37762ee2222e77e8",
-  "22b7e22222e2267773e222eeee3ee222eb777e22be222237628",
-  "22ebbbbbbbbe22e377736e23bbbe2eb37776622bbbbbbbbbe22",
-  "2e2bbbbbbbbb3e22637777737b7b777776622ebbbbbbbbbe23e",
-  "e3eee22222ebbbee22e637777777773e6222bbbeee2222eeebe",
-  "cb3e22222e22bbbbbe22226666666e222ebbbbee2ee2222ebb2",
-  "8bb3eee777622eebbb3be222222222ebbbbbee223777eeebbe8",
-  "02bb3e2eb77be22eeebbbb3eeee3bbbbbeee22e3776e2ebbec0",
-  "002bb3e2267773e222eeeeebbbeeeeeeee22e3777e223bbec00",
-  "0008ebbe22e37773622222eeeeeee22222337776622bbbec000",
-  "00008ebb3e22637777366e222222226b377776622ebbbe80000",
-  "0000002eb3ee22e3777777733333777777766222bbbbc000000",
-];
-let tutImg = null, tutPal = null;
-function tutImage() {
-  if (tutImg && tutPal === PAL) return tutImg;
-  const c = document.createElement("canvas"); c.width = TUT_TXT[0].length * 8; c.height = TUT_TXT.length * 8;
-  const keep = ctx; ctx = c.getContext("2d");
-  TUT_TXT.forEach((row, y) => [...row].forEach((ch, x) => {
-    const v = parseInt(TUT_COL[y][x], 16);
-    fill(x * 8, y * 8, 8, 8, PAL[v & 3]);
-    if (ch !== " ") text(ch, x * 8, y * 8, PAL[v >> 2]);
-  }));
-  ctx = keep; tutPal = PAL;
-  return (tutImg = c);
+function openWin95() {
+  const lines = ["Windows95.exe", "This program requires", "a real computer."];
+  const s = panelSize(lines, 2);
+  const w = openWin({ id:"win95", title:"System Request", type:"panel", mem:2048, lines,
+    x:(LW - Math.max(s.w, 240)) >> 1, y:(LH - s.h) >> 2, w:Math.max(s.w, 240), h:s.h,
+    buttons:[["Run anyway", () => { closeWin(w); runWin95(); }], ["Cancel", () => closeWin(w)]] });
+  snd("err");
 }
-function openTut() {
-  if (scrOf("tut")) { scrFront(scrOf("tut")); dirty(); return; }
-  busy(1100); titleMsg = { t:"Loading Tutankhamun ...", until:performance.now() + 1100 };
-  for (let i = 0; i < 6; i++) setTimeout(() => snd("step"), 120 + i * 140);
-  setTimeout(() => { if (mode === "wb" && !scrOf("tut")) { screens.push({ id:"tut", y:0, lace:true }); dirty(); } }, 1000);
+function runWin95() {
+  busy(2800); titleMsg = { t:"Loading Windows95.exe ... insert disk 2 of 13", until:performance.now() + 2800 };
+  for (let i = 0; i < 9; i++) setTimeout(() => snd(i % 3 === 2 ? "grind" : "step"), 150 + i * 260);
+  setTimeout(() => { if (mode === "wb" && !scrOf("bsod")) { screens.push({ id:"bsod", y:0 }); snd("err"); dirty(); } }, 2700);
 }
-function renderTut() {                       // into the interlace buffer: twice as many lines
-  const H = 2 * LH;
-  fill(0, 0, LW, H, BL);
-  fill(0, 0, LW, 10, WH);
-  text(LW < 400 ? "Tutankhamun" : "Tutankhamun   640 x 512 interlace   click to close", 4, 1, BL);
-  depthGadgets(LW - 46, -1);
-  const im = tutImage(), k = Math.min(1, LW / im.width, (H - 12) / im.height);   // small screens: shrink, don't crop
-  const w = Math.round(im.width * k), h = Math.round(im.height * k);
-  ctx.imageSmoothingEnabled = k < 1;
-  ctx.drawImage(im, (LW - w) >> 1, 10 + Math.max(0, (H - 10 - h) >> 1), w, h);
-  ctx.imageSmoothingEnabled = false;
+function bsodOff() { closeScr("bsod"); busy(300); titleMsg = { t:"Welcome back to a real computer.", until:performance.now() + 4000 }; }
+function wordWrap(s, cols) {
+  const ind = s.startsWith("*") ? "   " : "", out = [];   // bullets hang their second line
+  let cur = "";
+  for (const w of s.split(" ")) {
+    if (cur && (cur + " " + w).length > cols) { out.push(cur); cur = ind + w; }
+    else cur = cur ? cur + " " + w : w;
+  }
+  return out.concat(cur);
 }
-ICON.tut = makeIcon(28, 20, g => {            // the mask in miniature
-  g.rect(0, 0, 28, 20, 4);
-  g.poly([[9,0],[18,0],[26,11],[26,19],[1,19],[1,11]], 3, 2);
-  for (let y = 4; y < 19; y += 3) g.rect(2, y, 24, 1, 2);
-  g.ell(13, 10, 6, 7, 3, 2); g.rect(8, 3, 11, 2, 3);
-  g.rect(9, 8, 3, 1, 2); g.rect(15, 8, 3, 1, 2); g.px(10, 8, 1); g.px(16, 8, 1);
-  g.rect(13, 9, 1, 4, 2); g.rect(11, 14, 5, 1, 2);
-  g.rect(12, 17, 3, 3, 1); g.frame(12, 17, 3, 3, 2); g.rect(13, 0, 1, 3, 1);
+function renderBSOD() {                          // its own palette: VGA blue, grey, white
+  const BLUE = "#0000aa", GREY = "#aaaaaa", WHITE = "#ffffff";
+  fill(0, 0, LW, LH, BLUE);
+  const cols = Math.min(72, Math.floor((LW - 16) / 8)), x = (LW - cols * 8) >> 1;
+  const L = BSOD.flatMap(s => s ? wordWrap(s, cols) : [""]);
+  const tail = "Press any key to continue ";
+  let y = Math.max(14, (LH - (L.length + 6) * 8) >> 1);
+  const t = " Windows ";
+  text(t, (LW - t.length * 8) >> 1, y, BLUE, GREY); y += 24;
+  L.forEach(l => { text(l, x, y, WHITE); y += 8; });
+  y += 16;
+  const tx = (LW - (tail.length + 1) * 8) >> 1;
+  text(tail, tx, y, WHITE);
+  if (Math.floor(Date.now() / 400) % 2 === 0) fill(tx + tail.length * 8, y + 6, 8, 2, WHITE);   // the DOS cursor
+}
+ICON.win95 = makeIcon(30, 20, g => {             // a PC monitor, blue screen and all
+  g.rect(0, 0, 30, 20, 4);
+  g.rect(1, 0, 28, 16, 1); g.frame(1, 0, 28, 16, 2);
+  g.rect(4, 2, 22, 11, 0); g.frame(3, 1, 24, 13, 2);
+  g.rect(12, 4, 6, 1, 1); for (const y of [7, 9, 11]) g.rect(6, y, y === 11 ? 10 : 18, 1, 1);
+  g.rect(11, 16, 8, 2, 1); g.frame(11, 16, 8, 2, 2); g.rect(6, 18, 18, 2, 1); g.frame(6, 18, 18, 2, 2);
 });
 /* ---------- Preferences: the four colour registers, 4 bits per gun --------- */
 // As on the A500: 16 steps for red, green and blue, 4096 colours in all.
@@ -705,7 +587,7 @@ ICON.prefs = makeIcon(30, 18, g => {           // a tiny Preferences screen: reg
 const INFO_NOTE = {
   "About":"yes, it recurses", "GitHub":"github.com/faf-net", "Workbench":"1.3 or 1.0 - you choose",
   "System":"the boring bits", "Utilities":"handle with care", "Games":"for the lunch break",
-  "PGP Key":"5F8D 266C 7127 8827", "King Tut":"text art after the mask", "Trashcan":"empty. honest.",
+  "PGP Key":"5F8D 266C 7127 8827", "Windows95.exe":"requires a real computer", "Trashcan":"empty. honest.",
   "Kickstart":"34.5", "Shell":"1> _", "Clock":"tick", "Prefs":"4096 colours",
   "X-Copy":"copy only your own disks", "VirusX":"trust no bootblock", "SysInfo":"68000 at 7.09 MHz",
   "SCA-Virus":"harmless re-enactment", "ByteBandit":"harmless re-enactment", "Caves":"boulders included",
@@ -715,9 +597,9 @@ function openInfo(ic) {
   if (!ic) return;
   const im = ICON[ic.img];
   const kind = /disk/.test(ic.img) || ic.img === "wopr" ? "Disk" : ic.img === "drawer" ? "Drawer" : ic.img === "trash" ? "Garbage"
-             : ["doc", "tut", "picture", "pgp"].includes(ic.img) ? "Project" : "Tool";
+             : ["doc", "picture", "pgp"].includes(ic.img) ? "Project" : "Tool";
   const h = [...ic.label].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 7);
-  const bytes = 900 + h % 24000, blocks = Math.ceil(bytes / 488) + 1;          // OFS: 488 data bytes a block
+  const bytes = ic.label === "Windows95.exe" ? 25165824 : 900 + h % 24000, blocks = Math.ceil(bytes / 488) + 1;          // OFS: 488 data bytes a block
   const L = [["Name:    " + ic.label, WH], ["Type:    " + kind, WH]];
   if (kind === "Disk") {
     const d = { "faf.net":[1386, 372], "RAM DISK":[14, 0] }[ic.label];
@@ -726,7 +608,7 @@ function openInfo(ic) {
   } else if (kind === "Tool" || kind === "Project") {
     L.push(["Blocks:  " + blocks, WH], ["Bytes:   " + bytes, WH]);
     L.push(kind === "Tool" ? ["Stack:   4096", WH]
-         : ["Default Tool: SYS:Utilities/" + (ic.img === "doc" || ic.img === "pgp" ? "More" : "ShowIFF"), WH]);
+         : ["Default Tool: SYS:Utilities/" + (ic.img === "doc" || ic.img === "pgp" ? "More" : "Display"), WH]);
   }
   L.push(["", WH], ["Comment:", OR], [INFO_NOTE[ic.label] || "", WH]);
   const s = panelSize(L, 2), ww = Math.max(s.w + im.w + 8, 220), hh = Math.max(s.h, im.h + 40);
@@ -742,7 +624,10 @@ function openUtil() {
              mkIcon("SCA-Virus", "sca", () => startSCA()), mkIcon("ByteBandit", "bandit", () => startBB()) ] });
 }
 function openRam()   { openWin({ id:"ram",   title:"RAM DISK", type:"drawer", gauge:true, fill:1, mem:8192, x:LW - 280, y:40, w:210, h:70 }); }
-function openTrash() { openWin({ id:"trash", title:"Trashcan", type:"drawer", gauge:false, mem:8192, x:60 + cascade(), y:60 + cascade(), w:200, h:70 }); }
+function openTrash() {
+  openWin({ id:"trash", title:"Trashcan", type:"drawer", gauge:false, mem:8192, x:60 + cascade(), y:60 + cascade(), w:200, h:70, cell:120,
+    icons: [ mkIcon("Windows95.exe", "win95", openWin95) ] });       // deleted, but not quite gone
+}
 function openAbout() {
   const L = aboutLines(), maxc = Math.max(...L.map(s => s.length));
   openWin({ id:"about" + (++multiN), title:"About", type:"text", mem:12288,
@@ -921,9 +806,9 @@ function exec(raw) {
       out("DIR INFO DATE AVAIL VERSION ECHO TYPE");
       out("ABOUT CLOCK WOPR GITHUB PALETTE CLS ENDCLI");
       out("XCOPY VIRUSX SYSINFO CAVES PGP REBOOT SOUND");
-      out("SHOWIFF TUT PREFS"); break;
+      out("PREFS WINDOWS95.EXE"); break;
     case "dir": case "list":
-      out("     Trashcan (dir)"); out("  About     Clock     GitHub    Shell");  out("  Workbench WOPR      Tut.pic"); break;
+      out("     Trashcan (dir)"); out("  About     Clock     GitHub    Shell");  out("  Workbench WOPR"); break;
     case "info":
       out("Unit Size  Used Free Full Errs Status   Name");
       out("DF0: 880K  1386  372  79%   0  Read/Write faf.net");
@@ -957,9 +842,7 @@ function exec(raw) {
     case "sysinfo": openSysInfo(); break;
     case "caves": startCaves(); break;
     case "prefs": case "preferences": openPrefs(); break;
-    case "showiff": case "tut":
-      if (arg && !/^(tut|king.?tut|tutankhamun)(\.pic)?$/i.test(arg)) { out("ShowIFF: can't open " + arg); break; }
-      openTut(); break;
+    case "windows95.exe": case "windows95": case "win95": case "win": openWin95(); break;
     case "pgp": out("OpenPGP " + PGP_FPR); openPGP(); break;
     case "xcopy": case "x-copy": startXCopy(); break;
     case "sound": muted = /^off$/i.test(arg); out("Sound " + (muted ? "off" : "on")); break;
@@ -1090,8 +973,9 @@ function renderScreens() {                           // back to front, in device
   for (const s of screens) {
     if (s.y >= LH) continue;
     const y2 = Math.round(s.y * 2), h2 = 2 * LH - y2;
-    if (s.lace) { ctx = lctx; renderTut(); out.drawImage(laceBuf, 0, 0, LW, h2, 0, y2, LW, h2); }
-    else { ctx = sctx; renderWB(); out.drawImage(scrBuf, 0, 0, LW, LH - s.y, 0, y2, LW, h2); }
+    ctx = sctx;
+    if (s.id === "bsod") renderBSOD(); else renderWB();
+    out.drawImage(scrBuf, 0, 0, LW, LH - s.y, 0, y2, LW, h2);
   }
   ctx = out; out.setTransform(1, 0, 0, 2, 0, 0); drawPointer(); out.setTransform(1, 0, 0, 1, 0, 0);
   ctx = keep;
@@ -1128,14 +1012,14 @@ function resize() {
   let k = Math.max(1, Math.round(dh / 512));
   while (k > 1 && (dw / k < 320 || dh / (2 * k) < 180)) k--;
   LW = Math.floor(dw / k); LH = Math.floor(dh / (2 * k));
-  cv.width = lo.width = scrBuf.width = laceBuf.width = LW;
-  lo.height = scrBuf.height = LH; cv.height = laceBuf.height = 2 * LH;
+  cv.width = lo.width = scrBuf.width = LW;
+  lo.height = scrBuf.height = LH; cv.height = 2 * LH;
   screens.forEach(s => { s.y = Math.min(s.y, LH - titleH(s)); });
   const cssW = LW * k / dpr, cssH = LH * 2 * k / dpr;
   cv.style.width = scan.style.width = cssW + "px";
   cv.style.height = scan.style.height = cssH + "px";
   scan.style.backgroundSize = "100% " + (2 * k / dpr) + "px";
-  ctx.imageSmoothingEnabled = sctx.imageSmoothingEnabled = lctx.imageSmoothingEnabled = out.imageSmoothingEnabled = false;
+  ctx.imageSmoothingEnabled = sctx.imageSmoothingEnabled = out.imageSmoothingEnabled = false;
   layoutDesk(false);
   wins.forEach(w => {
     w.w = Math.min(w.w, LW); w.h = Math.min(w.h, LH);
@@ -1206,7 +1090,7 @@ cv.addEventListener("pointerdown", e => {
       else drag = { k:"screen", s, oy:q.y, py:p.y, moved:false, touch:e.pointerType !== "mouse" };
       dirty(); return;
     }
-    if (s.id === "tut") { if (e.button === 0) { closeScr("tut"); busy(300); } dirty(); return; }   // click to exit, like ShowIFF
+    if (s.id === "bsod") { if (e.button === 0) bsodOff(); dirty(); return; }   // a click counts as "any key"
     p = q;                                             // from here on: Workbench coordinates
   } else p = { x:p.x, y:p.y - wbY() };
 
@@ -1330,8 +1214,13 @@ kbd.addEventListener("input", () => {
 });
 addEventListener("keyup", e => { if (mode === "cave") DC.key(e, false); });
 addEventListener("keydown", e => {
-  if (mode === "wb" && screens.length > 1 && (e.key === "Escape" || (e.altKey && /^[mn]$/i.test(e.key)))) {
-    if (e.key === "Escape") closeScr("tut"); else scrBack(screens[screens.length - 1]);   // Amiga-M: flip screens
+  if (mode === "wb" && screens.length > 1 && e.altKey && /^[mn]$/i.test(e.key)) {   // Amiga-M: flip screens
+    scrBack(screens[screens.length - 1]); e.preventDefault(); dirty(); return;
+  }
+  if (mode === "wb" && screens[screens.length - 1].id === "bsod") {
+    if (["Control", "Alt", "Shift", "Meta", "AltGraph"].includes(e.key)) return;   // modifiers alone are no key
+    if (e.ctrlKey && e.altKey && (e.key === "Delete" || e.key === "Backspace")) { closeScr("bsod"); reboot(); }
+    else bsodOff();
     e.preventDefault(); dirty(); return;
   }
   if (e.target !== kbd && modeKey(e)) return;

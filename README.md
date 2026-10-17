@@ -25,7 +25,8 @@ wide). No frameworks, no build step, no trackers.
  Desktop   faf.net · RAM DISK · DF1:NDOS · WOPR
  faf.net   About · GitHub · Workbench
            System · Utilities · Games
-           PGP Key · King Tut · Trashcan
+           PGP Key · Trashcan
+ Trashcan  Windows95.exe
  System    Kickstart · Shell · Clock · Prefs
  Utilities X-Copy · VirusX · SysInfo · SCA-Virus · ByteBandit
  Games     Caves
@@ -55,15 +56,15 @@ wide). No frameworks, no build step, no trackers.
   boulders, fireflies and butterflies, generated caves of rising difficulty, high scores kept
   in the browser. Arrow keys/WASD, space, R, Esc; on phones swipe or use the on-screen pad.
 - **WOPR** on the desktop leads to the WarGames terminal.
-- **King Tut** opens Tutankhamun's mask as text art on a hires interlace screen of its own
-  (640 × 512, as Deluxe Paint used for fine pictures): 51 × 60 Topaz characters, each with pen
-  and paper from the four colour registers. Click to close.
+- **Windows95.exe** lies in the Trashcan. It requires a real computer; run it anyway and it
+  crashes on a screen of its own, blue screen and all. Any key brings you back, Ctrl+Alt+Del
+  reboots the Amiga.
 - **Prefs** edits the four colour registers with R/G/B sliders, 16 steps per gun like the A500
   (4096 colours); Use keeps them for the visit, Save for good, Reset goes back to the palette.
 - **Info** (Workbench menu, right mouse button) shows name, type, blocks, bytes and comment of
   the selected icon.
 - **Screens** can be pulled down by their title bars, as on a real Amiga; the depth gadgets
-  and Alt+M flip them, Esc closes the picture.
+  and Alt+M flip them.
 - **PGP Key:** OpenPGP key (ed25519/cv25519, fingerprint `1E27 72BA 59E0 791E 146C CB23 5F8D 266C 7127 8827`)
   with Mail, Download and a key window with Copy. The e-mail address never appears as text in
   the page source — it is assembled at run time and only drawn onto the canvas.
@@ -76,9 +77,7 @@ wide). No frameworks, no build step, no trackers.
   WebAudio. X-Copy, SCA, Byte Bandit, VirusX and Boulder Dash are homages; their names and
   trademarks belong to their respective owners.
 - Virus behaviour as described by the Amiga Virus Encyclopedia (vht-dk.dk).
-- **King Tut** is drawn anew from the real mask (c. 1323 BC) — a tribute to Avril Harrison's
-  *Tutankhamun* for Deluxe Paint (Electronic Arts, 1986), not a copy of it.
-  About her: [The Artistry of Avril Harrison](https://scanlineartifacts.co.uk/2024/09/30/the-artistry-of-avril-harrison/).
+- The blue screen is a parody in its own words; Windows is a trademark of Microsoft.
 - `kickstart13.png` shows the Kickstart 1.3 artwork (© Commodore-Amiga) as a quotation.
 
 ## License

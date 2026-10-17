@@ -25,7 +25,8 @@ hoch wie breit). Keine Frameworks, kein Build-Schritt, keine Tracker.
  Desktop   faf.net · RAM DISK · DF1:NDOS · WOPR
  faf.net   About · GitHub · Workbench
            System · Utilities · Games
-           PGP Key · King Tut · Trashcan
+           PGP Key · Trashcan
+ Trashcan  Windows95.exe
  System    Kickstart · Shell · Clock · Prefs
  Utilities X-Copy · VirusX · SysInfo · SCA-Virus · ByteBandit
  Games     Caves
@@ -54,15 +55,15 @@ hoch wie breit). Keine Frameworks, kein Build-Schritt, keine Tracker.
   Felsen, Glühwürmchen und Schmetterlinge, erzeugte Höhlen mit steigender Schwierigkeit,
   Highscore im Browser. Pfeiltasten/WASD, Leertaste, R, Esc; am Handy Wischen oder Steuerkreuz.
 - **WOPR** auf dem Desktop führt zum WarGames-Terminal.
-- **King Tut** öffnet die Maske des Tutanchamun als Textbild auf einem eigenen Hi-Res-Interlace-Screen
-  (640 × 512, wie Deluxe Paint für feine Bilder): 51 × 60 Topaz-Zeichen, jedes mit Stift- und
-  Papierfarbe aus den vier Farbregistern. Klick schließt.
+- **Windows95.exe** liegt im Trashcan. Es braucht einen richtigen Computer; wer es trotzdem
+  startet, bekommt auf einem eigenen Screen den Bluescreen. Eine Taste führt zurück,
+  Strg+Alt+Entf startet den Amiga neu.
 - **Prefs** stellt die vier Farbregister mit R/G/B-Reglern ein, 16 Stufen je Farbe wie beim A500
   (4.096 Farben); Use gilt für den Besuch, Save dauerhaft, Reset holt die Palette zurück.
 - **Info** (Workbench-Menü, rechte Maustaste) zeigt Name, Typ, Blöcke, Bytes und Kommentar des
   gewählten Icons.
 - **Screens** lassen sich wie beim echten Amiga an der Titelleiste herunterziehen; die
-  Tiefen-Gadgets und Alt+M wechseln sie, Esc schließt das Bild.
+  Tiefen-Gadgets und Alt+M wechseln sie.
 - **PGP Key:** OpenPGP-Schlüssel (ed25519/cv25519, Fingerabdruck `1E27 72BA 59E0 791E 146C CB23 5F8D 266C 7127 8827`)
   mit Mail, Download und einem Schlüsselfenster mit Copy. Die E-Mail-Adresse steht nirgends als Text
   im Quelltext — sie wird erst zur Laufzeit zusammengesetzt und nur auf den Canvas gezeichnet.
@@ -75,9 +76,7 @@ hoch wie breit). Keine Frameworks, kein Build-Schritt, keine Tracker.
   WebAudio erzeugt. X-Copy, SCA, Byte Bandit, VirusX und Boulder Dash sind Hommagen;
   deren Namen und Marken gehören den jeweiligen Rechteinhabern.
 - Beschreibung der Viren nach der Amiga Virus Encyclopedia (vht-dk.dk).
-- **King Tut** ist neu gezeichnet nach der echten Maske (um 1323 v. Chr.) — eine Hommage an
-  Avril Harrisons *Tutankhamun* für Deluxe Paint (Electronic Arts, 1986), keine Kopie davon.
-  Über sie: [The Artistry of Avril Harrison](https://scanlineartifacts.co.uk/2024/09/30/the-artistry-of-avril-harrison/).
+- Der Bluescreen ist eine Parodie mit eigenem Text; Windows ist eine Marke von Microsoft.
 - `kickstart13.png` zeigt die Kickstart-1.3-Grafik (© Commodore-Amiga) als Zitat.
 
 ## Lizenz
