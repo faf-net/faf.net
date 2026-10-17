@@ -26,7 +26,7 @@ wide). No frameworks, no build step, no trackers.
  faf.net   About · GitHub · Workbench
            System · Utilities · Games
            PGP Key · King Tut · Trashcan
- System    Kickstart · Shell · Clock
+ System    Kickstart · Shell · Clock · Prefs
  Utilities X-Copy · VirusX · SysInfo · SCA-Virus · ByteBandit
  Games     Caves
 ```
@@ -57,6 +57,10 @@ wide). No frameworks, no build step, no trackers.
 - **WOPR** on the desktop leads to the WarGames terminal.
 - **King Tut** opens Tutankhamun's mask as text art on a screen of its own: 54 × 28 Topaz
   characters, each with pen and paper from the four colour registers. Click to close.
+- **Prefs** edits the four colour registers with R/G/B sliders, 16 steps per gun like the A500
+  (4096 colours); Use keeps them for the visit, Save for good, Reset goes back to the palette.
+- **Info** (Workbench menu, right mouse button) shows name, type, blocks, bytes and comment of
+  the selected icon.
 - **Screens** can be pulled down by their title bars, as on a real Amiga; the depth gadgets
   and Alt+M flip them, Esc closes the picture.
 - **PGP Key:** OpenPGP key (ed25519/cv25519, fingerprint `1E27 72BA 59E0 791E 146C CB23 5F8D 266C 7127 8827`)

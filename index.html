@@ -287,15 +287,20 @@ const ICON = {
   })
 };
 
+function applyPal(pal) {
+  PAL = pal; [BL, WH, BK, OR] = PAL; RGB = PAL.map(hexRGB);
+  buildCMAP();
+  Object.values(ICON).forEach(ic => ic.paint());
+  for (const k in atlases) if (!PAL.includes(k) && !Object.values(SPR).includes(k)) delete atlases[k];   // sliders make many colours
+  document.body.style.background = document.documentElement.style.background = BL;
+  document.querySelector('meta[name="theme-color"]').content = BL;
+}
 function setTheme(id) {
   theme = id;
   const T = THEMES[id];
-  PAL = T.pal; [BL, WH, BK, OR] = PAL; RGB = PAL.map(hexRGB); SPR = T.spr; GURU = T.guru;
-  buildCMAP();
-  Object.values(ICON).forEach(ic => ic.paint());
-  document.body.style.background = document.documentElement.style.background = BL;
-  document.querySelector('meta[name="theme-color"]').content = BL;
-  try { localStorage.setItem("faf-wb-theme", id); } catch (_) {}
+  SPR = T.spr; GURU = T.guru;
+  applyPal(T.pal);
+  try { localStorage.setItem("faf-wb-theme", id); localStorage.removeItem("faf-wb-pal"); } catch (_) {}
 }
 function toggleTheme() {
   setTheme(theme === "amiga" ? "workbench" : "amiga");
@@ -422,8 +427,9 @@ function openDisk(id = "disk") {
              mkIcon("PGP Key", "pgp", () => openPGP()), mkIcon("King Tut", "tut", openTut), mkIcon("Trashcan", "trash", openTrash) ] });
 }
 function openSystem() {
-  openWin({ id:"system", title:"System", type:"drawer", gauge:false, mem:12288, x:50 + cascade(), y:40 + cascade(), w:266, h:64,
-    icons: [ mkIcon("Kickstart", "picture", openKick), mkIcon("Shell", "shell", openShell), mkIcon("Clock", "clock", openClock) ] });
+  openWin({ id:"system", title:"System", type:"drawer", gauge:false, mem:12288, x:50 + cascade(), y:40 + cascade(), w:344, h:64,
+    icons: [ mkIcon("Kickstart", "picture", openKick), mkIcon("Shell", "shell", openShell), mkIcon("Clock", "clock", openClock),
+             mkIcon("Prefs", "prefs", openPrefs) ] });
 }
 const KICK = new Image();
 KICK.onload = () => dirty();
@@ -554,6 +560,105 @@ ICON.tut = makeIcon(28, 20, g => {            // the mask in miniature
   g.rect(13, 9, 1, 4, 2); g.rect(11, 14, 5, 1, 2);
   g.rect(12, 17, 3, 3, 1); g.frame(12, 17, 3, 3, 2); g.rect(13, 0, 1, 3, 1);
 });
+/* ---------- Preferences: the four colour registers, 4 bits per gun --------- */
+// As on the A500: 16 steps for red, green and blue, 4096 colours in all.
+// "Use" keeps the colours until the next visit, "Save" keeps them for good.
+const nib = h => hexRGB(h).map(v => Math.round(v / 17));
+const fromNib = a => "#" + a.map(v => (v * 17).toString(16).padStart(2, "0")).join("");
+const PR = { sel:0, orig:null, cur:null };
+function prefsGeo(c) {
+  const tx = c.x + 24, tw = c.w - 64, kw = 16;
+  return { tx, tw, kw, sw: i => ({ x:c.x + 8 + i * 36, y:c.y + 16, w:28, h:12 }), sl: k => c.y + 36 + k * 13 };
+}
+function openPrefs() {
+  const ex = wins.find(w => w.id === "prefs");
+  if (ex) { raise(ex); active = ex; return; }
+  PR.orig = PAL.slice(); PR.cur = PAL.map(nib); PR.sel = 0;
+  const done = (keep, save) => {
+    if (!keep) applyPal(PR.orig);
+    else if (save) { try { localStorage.setItem("faf-wb-pal", JSON.stringify(PAL)); } catch (_) {} snd("step"); busy(400); }
+    closeWin(w);
+  };
+  const w = openWin({ id:"prefs", title:"Preferences", type:"panel", mem:24576,
+    x: LW < 520 ? 4 : Math.floor(LW * .1) + 90, y: 26 + cascade(), w: 360, h: 112,
+    lines: [["Workbench Colors", OR]],
+    buttons: [["Save", () => done(true, true)], ["Use", () => done(true, false)],
+              ["Reset", () => { PR.cur = THEMES[theme].pal.map(nib); applyPal(PR.cur.map(fromNib)); }],
+              ["Cancel", () => done(false)]],
+    draw: drawPrefs, press: pressPrefs });
+}
+function drawPrefs(c) {
+  const g = prefsGeo(c);
+  for (let i = 0; i < 4; i++) {
+    const r = g.sw(i);
+    if (i === PR.sel) { frame(r.x - 3, r.y - 3, r.w + 6, r.h + 6, WH); frame(r.x - 2, r.y - 2, r.w + 4, r.h + 4, BK); }
+    fill(r.x, r.y, r.w, r.h, PAL[i]); frame(r.x, r.y, r.w, r.h, BK);
+  }
+  const v = PR.cur[PR.sel];
+  for (let k = 0; k < 3; k++) {
+    const y = g.sl(k);
+    text("RGB"[k], c.x + 8, y + 1, WH);
+    frame(g.tx, y, g.tw, 10, WH); frame(g.tx - 1, y - 1, g.tw + 2, 12, BK);
+    const kx = g.tx + 2 + Math.round(v[k] * (g.tw - 4 - g.kw) / 15);
+    fill(kx, y + 2, g.kw, 6, WH); frame(kx, y + 2, g.kw, 6, BK);
+    text(v[k].toString(16).toUpperCase(), g.tx + g.tw + 8, y + 1, OR);
+  }
+}
+function pressPrefs(p, c) {
+  const g = prefsGeo(c);
+  for (let i = 0; i < 4; i++) { const r = g.sw(i); if (p.x >= r.x - 3 && p.x < r.x + r.w + 3 && p.y >= r.y - 3 && p.y < r.y + r.h + 3) { PR.sel = i; return; } }
+  for (let k = 0; k < 3; k++) {
+    const y = g.sl(k);
+    if (p.y < y - 1 || p.y >= y + 11 || p.x < g.tx - 4 || p.x >= g.tx + g.tw + 4) continue;
+    const set = q => {
+      const v = clamp(Math.round((q.x - g.tx - 2 - g.kw / 2) * 15 / (g.tw - 4 - g.kw)), 0, 15);
+      if (PR.cur[PR.sel][k] === v) return;
+      PR.cur[PR.sel][k] = v; applyPal(PR.cur.map(fromNib));
+    };
+    set(p); drag = { k:"fn", move:set }; return;
+  }
+}
+ICON.prefs = makeIcon(30, 18, g => {           // a tiny Preferences screen: registers and sliders
+  g.rect(0, 0, 30, 18, 4);
+  g.rect(0, 0, 30, 17, 1); g.frame(0, 0, 30, 17, 2);
+  for (let i = 0; i < 4; i++) { g.rect(3 + i * 6, 3, 5, 4, i); g.frame(3 + i * 6, 3, 5, 4, 2); }
+  for (const [y, k] of [[9, 8], [12, 17], [15, 4]]) { g.rect(3, y, 24, 1, 2); g.rect(3 + k, y - 1, 4, 3, 3); }
+});
+
+/* ---------- Info: what the Workbench knows about an icon -------------------- */
+const INFO_NOTE = {
+  "About":"yes, it recurses", "GitHub":"github.com/faf-net", "Workbench":"1.3 or 1.0 - you choose",
+  "System":"the boring bits", "Utilities":"handle with care", "Games":"for the lunch break",
+  "PGP Key":"5F8D 266C 7127 8827", "King Tut":"text art after the mask", "Trashcan":"empty. honest.",
+  "Kickstart":"34.5", "Shell":"1> _", "Clock":"tick", "Prefs":"4096 colours",
+  "X-Copy":"copy only your own disks", "VirusX":"trust no bootblock", "SysInfo":"68000 at 7.09 MHz",
+  "SCA-Virus":"harmless re-enactment", "ByteBandit":"harmless re-enactment", "Caves":"boulders included",
+  "faf.net":"FAF Ain't Falken", "RAM DISK":"gone after reboot", "DF1:NDOS":"", "WOPR":"SHALL WE PLAY A GAME?"
+};
+function openInfo(ic) {
+  if (!ic) return;
+  const im = ICON[ic.img];
+  const kind = /disk/.test(ic.img) || ic.img === "wopr" ? "Disk" : ic.img === "drawer" ? "Drawer" : ic.img === "trash" ? "Garbage"
+             : ["doc", "tut", "picture", "pgp"].includes(ic.img) ? "Project" : "Tool";
+  const h = [...ic.label].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 7);
+  const bytes = 900 + h % 24000, blocks = Math.ceil(bytes / 488) + 1;          // OFS: 488 data bytes a block
+  const L = [["Name:    " + ic.label, WH], ["Type:    " + kind, WH]];
+  if (kind === "Disk") {
+    const d = { "faf.net":[1386, 372], "RAM DISK":[14, 0] }[ic.label];
+    L.push(["Status:  " + (ic.label === "WOPR" ? "Read Only" : "Read/Write"), WH]);
+    L.push(d ? ["Blocks:  " + d[0] + " used, " + d[1] + " free", WH] : ["Blocks:  ???", WH]);
+  } else if (kind === "Tool" || kind === "Project") {
+    L.push(["Blocks:  " + blocks, WH], ["Bytes:   " + bytes, WH]);
+    L.push(kind === "Tool" ? ["Stack:   4096", WH]
+         : ["Default Tool: SYS:Utilities/" + (ic.img === "doc" || ic.img === "pgp" ? "More" : "ShowIFF"), WH]);
+  }
+  L.push(["", WH], ["Comment:", OR], [INFO_NOTE[ic.label] || "", WH]);
+  const s = panelSize(L, 2), ww = Math.max(s.w + im.w + 8, 220), hh = Math.max(s.h, im.h + 40);
+  const w = openWin({ id:"info:" + ic.label, title:ic.label, type:"panel", mem:4096, lines:L,
+    x: clamp(ptr.x - (ww >> 1), 0, LW - ww), y: 24 + cascade(), w:ww, h:hh,
+    buttons: [["Save", () => { snd("step"); busy(300); closeWin(w); }], ["Quit", () => closeWin(w)]],
+    draw: c => ctx.drawImage(im.n, c.x + c.w - im.w - 8, c.y + 6) });
+}
 function openUtil() {
   openWin({ id:"util", title:"Utilities", type:"drawer", gauge:false, mem:12288, x:60 + cascade(), y:50 + cascade(), w:266, h:100,
     icons: [ mkIcon("X-Copy", "xcopy", () => startXCopy()), mkIcon("VirusX", "virusx", () => openVirusX()),
@@ -739,7 +844,7 @@ function exec(raw) {
       out("DIR INFO DATE AVAIL VERSION ECHO TYPE");
       out("ABOUT CLOCK WOPR GITHUB PALETTE CLS ENDCLI");
       out("XCOPY VIRUSX SYSINFO CAVES PGP REBOOT SOUND");
-      out("SHOWIFF TUT"); break;
+      out("SHOWIFF TUT PREFS"); break;
     case "dir": case "list":
       out("     Trashcan (dir)"); out("  About     Clock     GitHub    Shell");  out("  Workbench WOPR      Tut.pic"); break;
     case "info":
@@ -774,6 +879,7 @@ function exec(raw) {
     case "virusx": openVirusX(); break;
     case "sysinfo": openSysInfo(); break;
     case "caves": startCaves(); break;
+    case "prefs": case "preferences": openPrefs(); break;
     case "showiff": case "tut":
       if (arg && !/^(tut|king.?tut|tutankhamun)(\.pic)?$/i.test(arg)) { out("ShowIFF: can't open " + arg); break; }
       openTut(); break;
@@ -792,7 +898,9 @@ const MENUS = [
   { t:"Workbench", items:[
     ["Open",      () => !!selIcon(), () => { const ic = selIcon(); if (ic) ic.act(); }],
     ["Close",     () => !!active,    () => closeWin(active)],
-    ["Duplicate", NO], ["Rename", NO], ["Info", NO], ["Discard", NO] ]},
+    ["Duplicate", NO], ["Rename", NO],
+    ["Info",      () => !!selIcon(), () => openInfo(selIcon())],
+    ["Discard", NO] ]},
   { t:"Disk", items:[ ["Empty Trash", NO], ["Initialize", NO] ]},
   { t:"Special", items:[
     ["Clean Up",   () => true, () => { if (active && active.type === "drawer") layoutIcons(active); else layoutDesk(true); }],
@@ -1041,6 +1149,7 @@ cv.addEventListener("pointerdown", e => {
       else if (part === "content" && w.type === "panel") {
         const b = panelLayout(w, content(w)).find(b => p.x >= b.x && p.x < b.x + b.w && p.y >= b.y && p.y < b.y + b.h);
         if (b) { ac(); drag = { k:"btn", w, b }; }
+        else if (w.press) w.press(p, content(w));
       }
       else deselectAll();
     }
@@ -1064,7 +1173,8 @@ cv.addEventListener("pointermove", e => {
   if (menu) updMenu(p);
   if (drag) {
     const w = drag.w;
-    if (drag.k === "move") { drag.nx = clamp(p.x - drag.ox, 0, LW - w.w); drag.ny = clamp(p.y - drag.oy, 0, LH - w.h); }
+    if (drag.k === "fn") drag.move(p);
+    else if (drag.k === "move") { drag.nx = clamp(p.x - drag.ox, 0, LW - w.w); drag.ny = clamp(p.y - drag.oy, 0, LH - w.h); }
     else if (drag.k === "size") { drag.nw = clamp(p.x + drag.ox - w.x, 120, LW - w.x); drag.nh = clamp(p.y + drag.oy - w.y, 40, LH - w.y); }
     else if (drag.k === "icon") {
       const dx = p.x - drag.px, dy = p.y - drag.py;
@@ -1089,7 +1199,8 @@ cv.addEventListener("pointerup", e => {
   if (menu && !menu.sticky && e.button === 2) { runMenu(); menu = null; }
   if (drag) {
     const w = drag.w;
-    if (drag.k === "move") { w.x = drag.nx; w.y = drag.ny; }
+    if (drag.k === "fn") { if (drag.up) drag.up(p); }
+    else if (drag.k === "move") { w.x = drag.nx; w.y = drag.ny; }
     else if (drag.k === "size") { w.w = drag.nw; w.h = drag.nh; }
     else if (drag.k === "btn") { const b = drag.b; if (p.x >= b.x && p.x < b.x + b.w && p.y >= b.y && p.y < b.y + b.h) b.act(); }
     else if (drag.k === "close") { if (winAt(p) === w && hitPart(w, p.x, p.y) === "close") closeWin(w); }
@@ -1350,6 +1461,7 @@ function panelLayout(w, c) {
 function drawPanel(w, c) {
   const L = w.getLines ? w.getLines() : w.lines;
   L.forEach((l, i) => { const [s, col] = Array.isArray(l) ? l : [l, WH]; text(s, c.x + 6, c.y + 4 + i * 9, col); });
+  if (w.draw) w.draw(c);
   panelLayout(w, c).forEach(b => {
     frame(b.x, b.y, b.w, b.h, WH); frame(b.x - 1, b.y - 1, b.w + 2, b.h + 2, BK);
     text(b.label, b.x + 8, b.y + 2, WH);
@@ -1993,6 +2105,10 @@ function openPGPKey() {
 }
 
 if (theme !== "amiga") setTheme(theme);
+try {                                     // colours saved from Preferences
+  const c = JSON.parse(localStorage.getItem("faf-wb-pal"));
+  if (Array.isArray(c) && c.length === 4 && c.every(x => /^#[0-9a-f]{6}$/i.test(x))) applyPal(c);
+} catch (_) {}
 resize();
 runBoot();
 })();
