@@ -81,7 +81,7 @@ wide). No frameworks, no build step, no trackers.
 - Virus behaviour as described by the Amiga Virus Encyclopedia (vht-dk.dk).
 - The Workbench icons (disk, drawer, Trashcan, Shell, Clock, Notepad as About, Preferences,
   DiskCopy as X-Copy) are read straight from the `.info` files of the Workbench1.3 disk, with
-  their original highlighting; Palette, RAM disk and the window gadgets checked against a real
+  their original highlighting; Palette from the Extras 1.3 disk; RAM disk and the window gadgets checked against a real
   1.3 screen, first measured from [TAWS](https://www.taws.ch/WB.html) by Michael Rupp. All of
   it is © Commodore-Amiga and not covered by the MIT license (see `NOTICE`).
 - The blue screen is a parody in its own words; Windows is a trademark of Microsoft.

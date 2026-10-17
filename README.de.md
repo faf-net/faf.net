@@ -80,7 +80,7 @@ hoch wie breit). Keine Frameworks, kein Build-Schritt, keine Tracker.
 - Beschreibung der Viren nach der Amiga Virus Encyclopedia (vht-dk.dk).
 - Die Workbench-Icons (Disk, Schublade, Trashcan, Shell, Clock, Notepad als About, Preferences,
   DiskCopy als X-Copy) sind direkt aus den `.info`-Dateien der Diskette Workbench1.3 gelesen,
-  samt originaler Hervorhebung; Palette, RAM-Disk und Fenster-Gadgets sind an einem echten
+  samt originaler Hervorhebung; Palette von der Extras-1.3-Disk; RAM-Disk und Fenster-Gadgets sind an einem echten
   1.3-Bildschirm geprüft, zuerst ausgemessen an [TAWS](https://www.taws.ch/WB.html) von Michael Rupp.
   Alles davon ist © Commodore-Amiga und fällt nicht unter die MIT-Lizenz (siehe `NOTICE`).
 - Der Bluescreen ist eine Parodie mit eigenem Text; Windows ist eine Marke von Microsoft.
