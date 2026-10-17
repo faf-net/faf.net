@@ -753,7 +753,7 @@ const INFO_NOTE = {
   "About":"yes, it recurses", "GitHub":"github.com/faf-net", "Workbench":"1.3 or 1.0 - you choose",
   "System":"the boring bits", "Utilities":"handle with care", "Games":"for the lunch break",
   "PGP Key":"5F8D 266C 7127 8827", "Windows95.exe":"requires a real computer", "Trashcan":"empty. honest.",
-  "Kickstart":"34.5", "Shell":"1> _", "Clock":"tick", "Prefs":"4096 colours",
+  "Kickstart":"34.5", "Shell":"1> _", "Clock":"tick", "Prefs":"4096 colours", "Calculator":"no slide rule needed",
   "X-Copy":"copy only your own disks", "VirusX":"trust no bootblock", "SysInfo":"68000 at 7.09 MHz",
   "SCA-Virus":"harmless re-enactment", "ByteBandit":"harmless re-enactment", "Caves":"boulders included",
   "faf.net":"FAF Ain't Falken", "RAM DISK":"gone after reboot", "DF1:NDOS":"", "WOPR":"SHALL WE PLAY A GAME?"
@@ -782,11 +782,95 @@ function openInfo(ic) {
     buttons: [["Save", () => { snd("step"); busy(300); closeWin(w); }], ["Quit", () => closeWin(w)]],
     draw: c => ctx.drawImage(im.n, c.x + c.w - im.w - 8, c.y + 6) });
 }
+/* ---------- Calculator (Utilities): four rules, twelve digits ------------------ */
+const CALC_KEYS = [["CA", "CE", "<-", "/"], ["7", "8", "9", "*"], ["4", "5", "6", "-"], ["1", "2", "3", "+"], ["0", ".", "+-", "="]];
+const CALC_LABEL = { "/":"÷", "*":"×", "<-":"«", "+-":"±" };
+const CL = { disp:"0", acc:null, op:null, fresh:true, down:null };
+function calcIn(k) {
+  const err = () => { CL.disp = "Error"; CL.acc = null; CL.op = null; CL.fresh = true; };
+  const show = v => {
+    if (!isFinite(v)) return err();
+    let s = String(+v.toPrecision(12));
+    if (s.length > 14) s = v.toExponential(6).replace("e+", "e");
+    CL.disp = s;
+  };
+  if (/^[0-9]$/.test(k)) {
+    if (CL.fresh || CL.disp === "0" || CL.disp === "Error") CL.disp = k;
+    else if (CL.disp.replace(/[-.]/g, "").length < 12) CL.disp += k;
+    CL.fresh = false;
+  }
+  else if (k === ".") { if (CL.fresh || CL.disp === "Error") CL.disp = "0."; else if (!CL.disp.includes(".")) CL.disp += "."; CL.fresh = false; }
+  else if (k === "+-") { if (!/^(0|Error)$/.test(CL.disp)) CL.disp = CL.disp[0] === "-" ? CL.disp.slice(1) : "-" + CL.disp; }
+  else if (k === "<-") { if (!CL.fresh) { CL.disp = CL.disp.slice(0, -1); if (!CL.disp || CL.disp === "-") CL.disp = "0"; } }
+  else if (k === "CE") { CL.disp = "0"; CL.fresh = true; }
+  else if (k === "CA") { CL.disp = "0"; CL.acc = null; CL.op = null; CL.fresh = true; }
+  else {                                           // + - * / =
+    if (CL.disp === "Error") return;
+    if (CL.op && !CL.fresh) {
+      const a = CL.acc, b = parseFloat(CL.disp);
+      show(CL.op === "+" ? a + b : CL.op === "-" ? a - b : CL.op === "*" ? a * b : a / b);
+      if (CL.disp === "Error") return;
+    }
+    CL.acc = parseFloat(CL.disp); CL.op = k === "=" ? null : k; CL.fresh = true;
+  }
+}
+const calcBtn = (c, r, k) => ({ x:c.x + 24 + k * 36, y:c.y + 24 + r * 15, w:32, h:11 });
+function calcHit(p, c) {
+  for (let r = 0; r < 5; r++) for (let k = 0; k < 4; k++) {
+    const b = calcBtn(c, r, k);
+    if (p.x >= b.x && p.x < b.x + b.w && p.y >= b.y && p.y < b.y + b.h) return CALC_KEYS[r][k];
+  }
+  return null;
+}
+function openCalc() {
+  openWin({ id:"calc", title:"Calculator", type:"panel", mem:9216, lines:[], buttons:[],
+    x: LW < 520 ? 10 : Math.floor(LW * .1) + 200, y: 30 + cascade(), w:196, h:118,
+    draw(c) {
+      frame(c.x + 23, c.y + 4, 142, 14, BK); frame(c.x + 24, c.y + 5, 140, 12, WH);
+      const s = (CL.op ? ({ "/":"÷", "*":"×" }[CL.op] || CL.op) + " " : "") + CL.disp;
+      text(s.slice(-16), c.x + 160 - Math.min(16, s.length) * 8, c.y + 7, WH);
+      CALC_KEYS.forEach((row, r) => row.forEach((k, i) => {
+        const b = calcBtn(c, r, i), l = CALC_LABEL[k] || k;
+        frame(b.x, b.y, b.w, b.h, WH); frame(b.x - 1, b.y - 1, b.w + 2, b.h + 2, BK);
+        text(l, b.x + ((b.w - l.length * 8) >> 1), b.y + 2, /^[0-9.]$/.test(k) ? WH : OR);
+        if (CL.down === k) comp(b.x, b.y, b.w, b.h);
+      }));
+    },
+    press(p, c) {                                  // a gadget fires on release, inside the gadget, as in Intuition
+      const k = calcHit(p, c); if (!k) return;
+      CL.down = k;
+      drag = { k:"fn", move: q => { CL.down = calcHit(q, c) === k ? k : null; },
+               up: q => { if (calcHit(q, c) === k) calcIn(k); CL.down = null; } };
+    } });
+}
+function calcKey(e) {                              // the keyboard works too, while the Calculator is active
+  if (!(mode === "wb" && active && active.id === "calc") || e.ctrlKey || e.metaKey || e.altKey) return false;
+  const k = { Enter:"=", "=":"=", Backspace:"<-", Escape:"CA", Delete:"CE", ",":"." }[e.key] || (/^[0-9.+\-*/]$/.test(e.key) ? e.key : null);
+  if (!k) return false;
+  calcIn(k); e.preventDefault(); dirty(); return true;
+}
+ICON.calc = makeIcon(28, 15, g => g.bits([
+  " 22222222222222222222222222",
+  "2211111111111111111111111122",
+  "2211122222222222222222211122",
+  "2211122222222222222222211122",
+  "2211111111111111111111111122",
+  "2211122211222112221122211122",
+  "2211122211222112221122211122",
+  "2211111111111111111111111122",
+  "2211122211222112221122211122",
+  "2211122211222112221122211122",
+  "2211111111111111111111111122",
+  "2211122211222112221122211122",
+  "2211122211222112221122211122",
+  "2211111111111111111111111122",
+  " 22222222222222222222222222" ]));   // Utilities/Calculator.info, original from the Workbench1.3 disk
 function openUtil() {
-  openWin({ id:"util", title:"Utilities", type:"drawer", gauge:false, mem:12288, x:60 + cascade(), y:50 + cascade(), w:266, h:100,
+  openWin({ id:"util", title:"Utilities", type:"drawer", gauge:false, mem:12288, x:60 + cascade(), y:50 + cascade(), w:300, h:100, cell:90,
     icons: [ mkIcon("X-Copy", "xcopy", () => startXCopy()), mkIcon("VirusX", "virusx", () => openVirusX()),
              mkIcon("SysInfo", "sysinfo", () => openSysInfo()),
-             mkIcon("SCA-Virus", "sca", () => startSCA()), mkIcon("ByteBandit", "bandit", () => startBB()) ] });
+             mkIcon("SCA-Virus", "sca", () => startSCA()), mkIcon("ByteBandit", "bandit", () => startBB()),
+             mkIcon("Calculator", "calc", openCalc) ] });
 }
 function openRam()   { openWin({ id:"ram",   title:"RAM DISK", type:"drawer", gauge:true, fill:1, mem:8192, x:LW - 280, y:40, w:210, h:70 }); }
 function openTrash() {
@@ -979,7 +1063,7 @@ function exec(raw) {
       out("DIR INFO DATE AVAIL VERSION ECHO TYPE");
       out("ABOUT CLOCK WOPR GITHUB PALETTE CLS ENDCLI");
       out("XCOPY VIRUSX SYSINFO CAVES PGP REBOOT SOUND");
-      out("PREFS WINDOWS95.EXE"); break;
+      out("PREFS CALCULATOR WINDOWS95.EXE"); break;
     case "dir": case "list":
       out("     Trashcan (dir)"); out("  About     Clock     GitHub    Shell");  out("  Workbench WOPR"); break;
     case "info":
@@ -1015,6 +1099,7 @@ function exec(raw) {
     case "sysinfo": openSysInfo(); break;
     case "caves": startCaves(); break;
     case "prefs": case "preferences": openPrefs(); break;
+    case "calculator": case "calc": openCalc(); break;
     case "windows95.exe": case "windows95": case "win95": case "win": openWin95(); break;
     case "pgp": out("OpenPGP " + PGP_FPR); openPGP(); break;
     case "xcopy": case "x-copy": startXCopy(); break;
@@ -1387,6 +1472,7 @@ kbd.addEventListener("input", () => {
 });
 addEventListener("keyup", e => { if (mode === "cave") DC.key(e, false); });
 addEventListener("keydown", e => {
+  if (calcKey(e)) return;
   if (mode === "wb" && screens.length > 1 && e.altKey && /^[mn]$/i.test(e.key)) {   // Amiga-M: flip screens
     scrBack(screens[screens.length - 1]); e.preventDefault(); dirty(); return;
   }

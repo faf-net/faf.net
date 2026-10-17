@@ -28,7 +28,7 @@ hoch wie breit). Keine Frameworks, kein Build-Schritt, keine Tracker.
            PGP Key · Trashcan
  Trashcan  Windows95.exe
  System    Kickstart · Shell · Clock · Prefs
- Utilities X-Copy · VirusX · SysInfo · SCA-Virus · ByteBandit
+ Utilities X-Copy · VirusX · SysInfo · SCA-Virus · ByteBandit · Calculator
  Games     Caves
 ```
 
@@ -58,6 +58,8 @@ hoch wie breit). Keine Frameworks, kein Build-Schritt, keine Tracker.
 - **Windows95.exe** liegt im Trashcan. Es braucht einen richtigen Computer; wer es trotzdem
   startet, bekommt auf einem eigenen Screen den Bluescreen. Eine Taste führt zurück,
   Strg+Alt+Entf startet den Amiga neu.
+- **Calculator** (Utilities, Original-Icon von 1.3) mit den vier Grundrechenarten, ± und zwölf Stellen;
+  bedienbar mit Maus und Tastatur (Ziffern, + - * /, Enter, Rücktaste, Esc, Entf).
 - **Prefs** stellt die vier Farbregister mit R/G/B-Reglern ein, 16 Stufen je Farbe wie beim A500
   (4.096 Farben); Use gilt für den Besuch, Save dauerhaft, Reset holt die Palette zurück.
 - **Info** (Workbench-Menü, rechte Maustaste) zeigt Name, Typ, Blöcke, Bytes und Kommentar des
