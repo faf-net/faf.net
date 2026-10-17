@@ -55,8 +55,9 @@ wide). No frameworks, no build step, no trackers.
   boulders, fireflies and butterflies, generated caves of rising difficulty, high scores kept
   in the browser. Arrow keys/WASD, space, R, Esc; on phones swipe or use the on-screen pad.
 - **WOPR** on the desktop leads to the WarGames terminal.
-- **King Tut** opens Tutankhamun's mask as text art on a screen of its own: 54 × 28 Topaz
-  characters, each with pen and paper from the four colour registers. Click to close.
+- **King Tut** opens Tutankhamun's mask as text art on a hires interlace screen of its own
+  (640 × 512, as Deluxe Paint used for fine pictures): 51 × 60 Topaz characters, each with pen
+  and paper from the four colour registers. Click to close.
 - **Prefs** edits the four colour registers with R/G/B sliders, 16 steps per gun like the A500
   (4096 colours); Use keeps them for the visit, Save for good, Reset goes back to the palette.
 - **Info** (Workbench menu, right mouse button) shows name, type, blocks, bytes and comment of

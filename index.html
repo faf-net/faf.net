@@ -77,7 +77,9 @@ const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const cv = document.getElementById("scr");
 const scan = document.getElementById("scan");
 const kbd = document.getElementById("kbd");
-let ctx = cv.getContext("2d", { alpha:false, willReadFrequently:true });   // swapped while a screen is drawn off-canvas
+const lo = document.createElement("canvas");             // the logical screen, LW x LH: one line = two device rows
+let ctx = lo.getContext("2d", { alpha:false, willReadFrequently:true });   // swapped while a screen is drawn off-canvas
+const out = cv.getContext("2d", { alpha:false });          // what you see: twice the lines, so interlace screens fit
 
 let LW = 640, LH = 256;                  // logical screen: hires pixels × lines
 
@@ -216,13 +218,15 @@ const ICON = {
     g.poly([[13,15],[22,15],[22,17],[14,18]], 1, 2);                      // fingers under the disk
     g.line(16, 16, 20, 16, 2);
   }),
-  sysdisk: makeIcon(36, 15, g => {          // the "System" disk, measured pixel by pixel from WB 1.3
+  sysdisk: makeIcon(36, 15, g => {          // the "System" disk, measured from WB 1.3 (screenshot, 17.10.2026)
     g.rect(0, 0, 36, 15, 2); g.rect(34, 0, 2, 1, 4); g.px(35, 1, 4);     // body, corner notch (transparent)
-    g.rect(9, 0, 17, 5, 3); g.rect(19, 1, 4, 3, 2);                      // shutter + slot
+    g.rect(9, 0, 18, 5, 3); g.rect(19, 1, 5, 3, 2);                      // shutter + slot
     g.rect(2, 13, 2, 1, 0);                                              // write-protect hole
-    g.rect(6, 7, 23, 8, 1);                                              // label to the bottom edge
-    for (let i = 0; i < 7; i++) for (const o of [0, 4]) { g.px(7 + i + o, 13 - i, 2); g.px(8 + i + o, 13 - i, 3); g.px(9 + i + o, 13 - i, 2); }
-    for (const [x, y] of [[21,7],[22,7],[23,7],[24,7],[20,8],[25,8],[19,9],[21,9],[23,9],[24,9],[25,9],[26,9],[20,10],[21,10],[22,10],[25,10],[26,10]]) g.px(x, y, 2);
+    g.rect(6, 7, 24, 8, 1); g.px(28, 7, 2); g.px(29, 7, 2); g.px(29, 8, 2);   // label with a chamfered corner
+    for (const o of [0, 4]) {                                            // the striped Amiga "A"
+      for (let i = 0; i < 7; i++) { g.px(7 + i + o, 13 - i, 2); g.px(8 + i + o, 13 - i, 3); g.px(9 + i + o, 13 - i, 2); }
+      for (let i = 0; i < 4; i++) { g.px(19 + i + o, 7 + i, 2); g.px(20 + i + o, 7 + i, 0); g.px(21 + i + o, 7 + i, 2); }
+    }
   }),
   drawer: makeIcon(77, 18, g => {           // closed drawer (measured from WB 1.3) …
     g.poly([[0,3],[11,0],[72,0],[66,3]], 1, 2);
@@ -451,6 +455,9 @@ function drawPicture(c) {
 // as ShowIFF and Deluxe Paint did, and you can drag it down to look behind it.
 const scrBuf = document.createElement("canvas");
 const sctx = scrBuf.getContext("2d", { alpha:false, willReadFrequently:true });
+const laceBuf = document.createElement("canvas");          // interlace screens: LW x 2·LH
+const lctx = laceBuf.getContext("2d", { alpha:false });
+const titleH = s => s.lace ? 5 : 10;                       // title bar height in Workbench lines
 let screens = [{ id:"wb", y:0 }];
 const scrOf = id => screens.find(s => s.id === id);
 const wbY = () => scrOf("wb").y;
@@ -460,69 +467,134 @@ function scrBack(s)  { screens.splice(screens.indexOf(s), 1); screens.unshift(s)
 function closeScr(id) { screens = screens.filter(s => s.id !== id); }
 
 /* ---------- Tutankhamun: text art on its own screen ------------------------ */
-// Drawn anew from the real mask (Cairo, c. 1323 BC) as 54 x 28 Topaz cells, each with
+// Drawn anew from the real mask (Cairo, c. 1323 BC) as 51 x 60 Topaz cells on a hires
+// interlace screen (twice the lines, as Deluxe Paint used for fine pictures), each with
 // a glyph, a pen and a paper colour from the four registers. A tribute to Avril
 // Harrison's Deluxe Paint picture of 1986, not a copy of it.
 // TUT_COL: one hex digit per cell = pen * 4 + paper (0 blue, 1 white, 2 black, 3 orange).
 const TUT_TXT = [
-  "                   ___@@@@@@@@@@__                    ",
-  "                 @@~ ?.....     %.~?_                 ",
-  "                _@    _..._x%   ....~_                ",
-  "               _~?    %.._&x%  @....@?_               ",
-  "              @~..%   /.x~%&%  ~...@../_              ",
-  "             @?_____   __-0&% -___@~ ..O?             ",
-  "           @@._____________&%___________&?_           ",
-  "         _~.?_-.?_..W%^~~~~~~~~?8&. _~.._@~?__        ",
-  "      _@~__..~0../x80__        __#%@~..@~--_~'?_      ",
-  "    @x~=;;_?___M_@__@@@_~%  x~_@@@____~___x_O;=/o_    ",
-  "  _^-....---___-=*@o*oox_    _oxo*x@@%-___---....-?_  ",
-  " x~=====;~~x@?%%8_*_x_#_#&  x*_].&_##8x%^8%~~;=====/, ",
-  " -.......-.O%.W8%=~~^^^~~x  o~~^^^~~=%%&.=&.-.......-_",
-  "[%%=====;~~%%_O8%%=..    #  0    ..=%%%&_@%~~;=====%%]",
-  "^........--?%o%~8%%%=.  x&  ]%  .=%%%&?%o%~--........x",
-  "]%%=====;~~~~~~~~8%%%=. *#==*@ .==%88~~~~~~~~;=====%%&",
-  "-..#%-----@_----#%8%%=._,x88%,_.=%%8%%----_%-----@_..-",
-  "]%%;:~~~~~.:~~~~=%%8%%==.~^^~.==%%%%%~~~~~:.~~~~~:=%%&",
-  "-..#&-----&%----#%%%%%%%%x-xox%%%%%%%%----#&-----#%..-",
-  "]%%;:~~~~~.:~~~~~~~~~~~~~@*Mo~~~~~~~~~~~~~:.~~~~~:=%%&",
-  "&..#&-----&%------------~MxoM~------------#&-----#%..@",
-  "@??_:~~~~~.@?8_=x~~~~~~~~W@@W~~~~~~~~%==@?&.~~~~~:?^^]",
-  "@?.?&-----&x?_.?0;?o_____M@*&_____x~;@~~_^o&-----#~.@%",
-  "&8~#:~~~~~.o_%~?__~?@@0;WMWM%]W#@@~~__^~%_o.~~~~~:0~8M",
-  "&?_%0----.&0_~?__o~~^@__________@^~~o_@~~_@&.----@o@~W",
-  "[_.~_ox-x~?0</@__~~?_____****____@~~~_@@8%@^~W^xo@~._]",
-  "/~*@_~?_%~?_.~?0W/??o,__________@@@O%W@^~._@~o_@~-@*~~",
-  "   ~^x__~?_*o~?__~~~~^@@00WW@@@0??~~~_@^~x*@@~_@o@~~  ",
+  "                                                   ",
+  "                   @_~~~~x~~~~&?                   ",
+  "                 @@ %....&    @.?_                 ",
+  "                 ~  &....&    &..~                 ",
+  "                @   #....&_   %...W                ",
+  "                %   -....&    ~...-_               ",
+  "               @%    ....%~   ....@_               ",
+  "               ~&    %...%#  x....O/_              ",
+  "              @...   %.x_W&  #....-._              ",
+  "              ~..%   &.~#]&  &...@../_             ",
+  "             @...&   #._#]&  %...O...%             ",
+  "            @&....   -.&#]&  %...~...^_            ",
+  "            @-0___%   _#x&&  ___#  -=_?            ",
+  "           @~           . &           %_           ",
+  "          @~=ooxoooxxoxxox#xxxoooooxoo%~_          ",
+  "         _~?--.?...0x%%^~~~^%%%#  .^...@/_         ",
+  "        _~..%-..%..@%~       ~%%. @...@--#_        ",
+  "       @~...._..?.@%=         =%%.^...~--x-_       ",
+  "      @~~%...?...8%%_         __%@...O---o~/_      ",
+  "     @%__=_...8.x~~..~?_   _@~..~?..@---@-__/?     ",
+  "    _....0_%..._O._@@_..   .._@@_..=___@......_    ",
+  "   _~----------_x%=-  ~?   ^~  -=?o_----------~_   ",
+  "   @=~~~~~~~_~~=%@@oM?_     @oMo?_%%~~_~~~~~~~=&_  ",
+  "  x====____x8%_&.@~@~0?#   0~@~?~?.#_o8%____====%  ",
+  " @.........O@%%W8~ ].& &% x& &.# ~8&x%O&.........? ",
+  " -.-------=#.]&%8?_W@0@#   0_#_x_^@&@&.8_-------.- ",
+  "#%===~~~~~]&.&x%=~?@@@~ o x ~@@@^~=%%%.]%~~~~~====0",
+  "#======___]&.&x%%       & ]       =%%%.]%___======]",
+  "#.........]&.@x%%.     x% x%     .=%%%.M%.........W",
+  "@..-------x%_O@8%==.   @% -%   .==%&%/_%%-------..]",
+  "]====~~~~~=%_=%$%%==.  @   &  .==%%%$%_x%~~~~~====[",
+  "]======____8%W%]%%%=.  0   #  .=%%%%=&#8____======&",
+  "-..........~8^.~8%%=- _~,_@~_ -=%%8~.?O~..........-",
+  "~..------------x88%=- /_[8?@~ -=%88o------------..-",
+  "W==~~~~~~~~~~~~=88%%=.  xoo  .==%8O%~~~~~~~~~~~~==&",
+  "]===._____.____x%8%%=._@@@@__.==%8%%____..____.===&",
+  "-..&~.....&....W%%%%==@~~oo~?==%8%%&....]~....~%..-",
+  "~..#_----.&----W%%8%%==~~^~~==%%%%%&----@_----#%..-",
+  "W===~~~~~~-~~~~=%%%8%%==   ==%%%%%%%~~~~-~~~~~~===&",
+  "]===._____.____x%%%%%%%%@o@%%%%%%%%%____..____.===&",
+  "-..&~.....&....W%%%%%%%%@_?%%%%%%%%&....]~....~%..-",
+  "%..#_----.&----W%%%%%%%=@.0=%%%%%%%&----@_----#%..-",
+  "]===~~~~~~-~~~~=%%%%%%%#@~_%%%%%%%%%~~~~-~~~~~~===&",
+  "]===._____.____x%%%%%%%%~@/%%%%%%%%%____..____.===%",
+  "]..&~.....&....W%%%%%%%%~_/=%%%%%%%&....]~....~%..[",
+  "&__&_----.8__..8%%%@@@@0^_?#@@@0%%%&..__@_----#%__&",
+  "&%%#~~~~~~-%%_..8==/___[@.0%__@~==@..@o%-~~~~~~0x%@",
+  "&?8'._____@_8%_..?0===8~0~0?O=%=@~..@o8@&.____.'8}]",
+  "&&8[~.....&._8%?_..~8@==.@_==_@~.._~88@.]~....~]8@@",
+  "&._[_----.&..?88o?_...~?~_&~~..._@x8O@..M_----#]@.@",
+  "@./_~~~~~~=%..?_88%~__.#^_?%._@~o88@~..@=~~~~~~_~.]",
+  "^_.#.______^/_..?_888%o~_@_~x%888@~.._&)..____.&.@~",
+  "?/_/~.....@x=~o_..~?_88888888O_@~..-@?/0O~....~^_%%",
+  "x_/_..---_..&/>]0_....~~~~~~~~..._@%%<@~.__--...&/]",
+  "/&_/_~?.xo_..?0^[/?@_........._@[ii)@~..@xo.^~.&/@~",
+  " &&_/_./_8%?_..~00%%%%~oooo??]]]=#@~.._~88@~._&/@~ ",
+  "  &&_^_..?88%?_...~@###%%%#####@~~.._^o8O@..@8_@~  ",
+  "   /x_^%..?_88%~_.....~~~~~~~.....@~o88@~..@}_/~   ",
+  "    /?_^]_..~_88%o~___.......-_@~x888@~.._O>_/~    ",
+  "      _#^/o,..?_*888%oo~~~~~xx%888/@~...@%]_~      ",
 ];
 const TUT_COL = [
-  "00000000000000000008ee2222233333e800000000000000000000",
-  "00000000000000000233fb22222fffffe222800000000000000000",
-  "00000000000000008bffffe222e77fff22222c0000000000000000",
-  "00000000000000082effffe22e3bbffe2222bbc000000000000000",
-  "000000000000002222bfffb2ebeebffe222bbbbe00000000000000",
-  "000000000000033eeeebfffeeb3ebfbeee3bfbbe20000000000000",
-  "000000000002bbbbbbbbbbbbbbbebbbbbbbbbbbbe2c00000000000",
-  "000000000c22ebbbbe22bbbbbbbbbbbbbbbfbe22ebb3e800000000",
-  "000000822ee22eebbbeee3bffffffffb3ebee22bbbbbe228000000",
-  "00002ebbbbb3eeebbeeebbbeebffbeebbbeeee3bbb3ebbbbe80000",
-  "008222222222eee2eeebbbbbbffffbbbbbbeee2eee222222222800",
-  "0c3bbbbbbbbbeebbbe7d1e9d6bff37dbe9d6bbbbeebbbbbbbbbbe0",
-  "02222222222be2bbbbbbb3bbbbffbb3b3bb3bbbe2ee22222222228",
-  "2bbbbbbbbbbbeebbbbbbbffffbffbffffbbbbbbeebbbbbbbbbbbb2",
-  "22222222222eb3beebbbbbffbbffbbffbbbbbeeb3be22222222222",
-  "ebbbbbbbbbbbbbbbbbbbbbbf3b773bfbbbbbbbbbbbbbbbbbbbbbbe",
-  "2223e22222be22223bbbbbbb3bbbb3bbbbbbbe2222ee22222be222",
-  "ebbbbbbbbbbbbbbbbbbbbbbbb7777bbbbbbbbbbbbbbbbbbbbbbbbe",
-  "2223e22222be22223bbbbbbbb33bbbbbbbbbbe22223e22222be222",
-  "ebbbbbbbbbbbbbbbbbbbbbbbbe3bbbbbbbbbbbbbbbbbbbbbbbbbbc",
-  "2223e22222be222222222222ee33ee2222222222223e22222be228",
-  "2eebbbbbbbbeeebbbeeeee666eeee666eeeeebbbeebbbbbbbbbee2",
-  "332ee22222b7362eeb3eecc88beee88ccee3beeee37e22222be2be",
-  "37bbbbbbbbbb37b36eeeeee3ebeebbeeeeeee63373bbbbbbbbb37c",
-  "2e37b22222bbee63b7b33b66eeeeee66b33b7b66eebe22222b7668",
-  "2e2637733eeeb3beee663333b7777b333e66ee3bbbeeebb77662e2",
-  "8eebee6373362eeee333e6eeeeeeeeeebbbbbeeee26b37bee2bee8",
-  "000ceeeee63773366eeeeeeeeeeeeeeeeeeeeeb33776e6e3ecc800",
+  "000000000000000000000000000000000000000000000000000",
+  "00000000000000000003e2222e3333e20000000000000000000",
+  "000000000000000002bfe2222bffffe22800000000000000000",
+  "000000000000000003ffe2222bffffe22200000000000000000",
+  "00000000000000003fffe2222b7fffe22280000000000000000",
+  "0000000000000000bfffb222295fffe22228000000000000000",
+  "0000000000000002bffff2222b7fff2222be000000000000000",
+  "00000000000000023ffffe222bbffb2222bb800000000000000",
+  "00000000000000222bfffe2eeb3ffe2222bbe00000000000000",
+  "00000000000000222bfffe2bee3ffe2223bbb80000000000000",
+  "000000000000022223fffe2bee3ffe222bbbbe0000000000000",
+  "0000000000002e2222fffb2bee3ffe222bbbbe8000000000000",
+  "000000000000bb3eeebfffebbb3ffeeebffbbe2000000000000",
+  "000000000002bfffffffffffbf3fffffffffffe800000000000",
+  "000000000023bbbbbbbbbbbbbbbbbbbbbbbbbbe2c0000000000",
+  "00000000082ebbbb222ebbbbbbbbbbebffbe222bbc000000000",
+  "000000008222bbbbe22bbbfffffffbbbbfe2223bbe800000000",
+  "0000000222222bbbb2bbbfffffffffbbbbe22ebbbb280000000",
+  "0000002bbe222ebbbbbbbfffffffffbbbe222bbbbbbbe000000",
+  "000002bbbbe222ebbee22ee3fff3ee22ee22bbbbeebbb200000",
+  "000082222e3e2223e2ebbe22fff22ebbe22e333e22222280000",
+  "000822222222222eebbbffb3fff3bffbbbee222222222228000",
+  "000bbbbbbbbbbbbbbee3be3fffffe3b3e3bbbbbbbbbbbbbe800",
+  "00ebbbbbbbbbbbbe2116671bfffb1767932bbbbbbbbbbbbbe00",
+  "02222222222bebeb3d532956bfb956215d3eebee22222222220",
+  "0222222222ee2eebb616376bfffb376716bebe2ee2222222220",
+  "2bbbbbbbbbbe23bbbb3bbb3fbfbf3bbb3bbbbe2ebbbbbbbbbb2",
+  "2bbbbbbbbbbe23bbbfffffffbfbfffffffbbbe2ebbbbbbbbbb2",
+  "2222222222ee2bbbbbfffffbbfbbfffffbbbbe2be2222222228",
+  "2222222222ebebeebbbbfffebfbbfffbbbbebbebe2222222222",
+  "ebbbbbbbbbbbbbbbbbbbbffefffbffbbbbbbbbbbbbbbbbbbbbe",
+  "ebbbbbbbbbbbebbbbbbbbffbfffbffbbbbbbbe3bbbbbbbbbbbe",
+  "22222222222eee2eebbbbfbe37eebfbbbbee2eee22222222222",
+  "222222222222222ebbbbbfbeb7b3bfbbbbbe222222222222222",
+  "bbbbbbbbbbbbbbbbbbbbbbffbbbffbbbbbbbbbbbbbbbbbbbbbe",
+  "ebbbbbbbbbbbbbbbbbbbbbbeeee33bbbbbbbbbbbbbbbbbbbbbe",
+  "2223e22222e2222bbbbbbbb3b7733bbbbbbe2222ee2222ee222",
+  "222be22222e2222bbbbbbbb77777bbbbbbbe2222be22223e222",
+  "bbbbbbbbbbbbbbbbbbbbbbbbfffbbbbbbbbbbbbbbbbbbbbbbbe",
+  "ebbbbbbbbbbbbbbbbbbbbbbbebebbbbbbbbbbbbbbbbbbbbbbbe",
+  "2223e22222e2222bbbbbbbbbbb3bbbbbbbbe2222ee2222ee222",
+  "222be22222e2222bbbbbbbbbe2ebbbbbbbbe2222be22223e222",
+  "ebbbbbbbbbbbbbbbbbbbbbbe3bebbbbbbbbbbbbbbbbbbbbbbbc",
+  "ebbbbbbbbbbbbbbbbbbbbbbbbebbbbbbbbbbbbbbbbbbbbbbbbe",
+  "e223e22222e2222bbbbbbbbbeeebbbbbbbbe2222ee2222ee22e",
+  "36e3e22222b6e22ebbbeeeee3b3eeeeebbbe22e6be22223ee6e",
+  "377bbbbbbb777622ebbbec82e2ec8c33bbe223777bbbbbbb77c",
+  "277bbbbbbbeb77622eebbbb33b33bbbbee22b776bbbbbbbb772",
+  "2b77e22222e2377be22eeebbbebbbbee22e37762ee2222e77e8",
+  "22b7e22222e2267773e222eeee3ee222eb777e22be222237628",
+  "22ebbbbbbbbe22e377736e23bbbe2eb37776622bbbbbbbbbe22",
+  "2e2bbbbbbbbb3e22637777737b7b777776622ebbbbbbbbbe23e",
+  "e3eee22222ebbbee22e637777777773e6222bbbeee2222eeebe",
+  "cb3e22222e22bbbbbe22226666666e222ebbbbee2ee2222ebb2",
+  "8bb3eee777622eebbb3be222222222ebbbbbee223777eeebbe8",
+  "02bb3e2eb77be22eeebbbb3eeee3bbbbbeee22e3776e2ebbec0",
+  "002bb3e2267773e222eeeeebbbeeeeeeee22e3777e223bbec00",
+  "0008ebbe22e37773622222eeeeeee22222337776622bbbec000",
+  "00008ebb3e22637777366e222222226b377776622ebbbe80000",
+  "0000002eb3ee22e3777777733333777777766222bbbbc000000",
 ];
 let tutImg = null, tutPal = null;
 function tutImage() {
@@ -541,15 +613,19 @@ function openTut() {
   if (scrOf("tut")) { scrFront(scrOf("tut")); dirty(); return; }
   busy(1100); titleMsg = { t:"Loading Tutankhamun ...", until:performance.now() + 1100 };
   for (let i = 0; i < 6; i++) setTimeout(() => snd("step"), 120 + i * 140);
-  setTimeout(() => { if (mode === "wb" && !scrOf("tut")) { screens.push({ id:"tut", y:0 }); dirty(); } }, 1000);
+  setTimeout(() => { if (mode === "wb" && !scrOf("tut")) { screens.push({ id:"tut", y:0, lace:true }); dirty(); } }, 1000);
 }
-function renderTut() {
-  fill(0, 0, LW, LH, BL);
+function renderTut() {                       // into the interlace buffer: twice as many lines
+  const H = 2 * LH;
+  fill(0, 0, LW, H, BL);
   fill(0, 0, LW, 10, WH);
-  text(LW < 400 ? "Tutankhamun" : "Tutankhamun   click to close", 4, 1, BL);
+  text(LW < 400 ? "Tutankhamun" : "Tutankhamun   640 x 512 interlace   click to close", 4, 1, BL);
   depthGadgets(LW - 46, -1);
-  const im = tutImage();
-  ctx.drawImage(im, (LW - im.width) >> 1, 10 + Math.max(0, (LH - 10 - im.height) >> 1));
+  const im = tutImage(), k = Math.min(1, LW / im.width, (H - 12) / im.height);   // small screens: shrink, don't crop
+  const w = Math.round(im.width * k), h = Math.round(im.height * k);
+  ctx.imageSmoothingEnabled = k < 1;
+  ctx.drawImage(im, (LW - w) >> 1, 10 + Math.max(0, (H - 10 - h) >> 1), w, h);
+  ctx.imageSmoothingEnabled = false;
 }
 ICON.tut = makeIcon(28, 20, g => {            // the mask in miniature
   g.rect(0, 0, 28, 20, 4);
@@ -751,8 +827,9 @@ function drawWin(w) {
   if (w.type !== "drawer") { const sx = w.x + w.w - 20, sy = w.y + w.h - 11; fill(sx, sy, 16, 9, WH); sizeGadget(sx, sy); }
 }
 
+const SLOT = 22;                               // tallest icon: images sit on one line, so do the labels
 function drawIcon(ic, ox, oy) {
-  const im = ICON[ic.img], ix = ox + ic.cx - (im.w >> 1), iy = oy + ic.y;
+  const im = ICON[ic.img], ix = ox + ic.cx - (im.w >> 1), iy = oy + ic.y + SLOT - im.h;
   ctx.drawImage(ic.sel ? im.s : im.n, ix, iy);
   if (ic.img === "wopr") {                     // WOPR's lamps never rest
     const tk = Math.floor(performance.now() / 350);
@@ -761,12 +838,12 @@ function drawIcon(ic, ox, oy) {
       if (v < 3) fill(ix + x, iy + y, 2, 1, ic.sel ? [BL, WH, BK][v] : [OR, BK, OR][v]);
     }
   }
-  text(ic.label, ox + ic.cx - (ic.lw >> 1), iy + im.h + 2, WH);
+  text(ic.label, ox + ic.cx - (ic.lw >> 1), oy + ic.y + SLOT + 2, WH);
 }
 function iconHit(list, x, y) {
   for (let i = list.length - 1; i >= 0; i--) {
     const ic = list[i], im = ICON[ic.img], hw = Math.max(im.w, ic.lw) >> 1;
-    if (x >= ic.cx - hw && x < ic.cx + hw && y >= ic.y && y < ic.y + im.h + 11) return ic;
+    if (x >= ic.cx - hw && x < ic.cx + hw && y >= ic.y + SLOT - im.h && y < ic.y + SLOT + 11) return ic;
   }
   return null;
 }
@@ -992,7 +1069,7 @@ function renderGuru() {
 }
 
 /* ---------- render ---------------------------------------------------- */
-function render() {
+function paint() {
   if (mode === "guru") { renderGuru(); return; }
   if (mode === "boot") { renderBoot(); drawPointer(); return; }
   if (mode === "sca") { renderSCA(); return; }
@@ -1000,17 +1077,24 @@ function render() {
   if (mode === "cave") { DC.draw(ctx, LW, LH, touchSeen); return; }
   if (mode === "xcopy") { renderXCopy(); drawPointer(); return; }
 
-  if (screens.length === 1 && !screens[0].y) { renderWB(); drawPointer(); return; }
-  const main = ctx;
-  fill(0, 0, LW, LH, "#000000");                     // nothing behind the last screen
+  renderWB(); drawPointer();
+}
+function render() {
+  if (mode === "wb" && (screens.length > 1 || screens[0].y)) { renderScreens(); return; }
+  paint();                                           // one screen: draw the logical screen, double its lines
+  out.drawImage(lo, 0, 0, LW, LH, 0, 0, LW, 2 * LH);
+}
+function renderScreens() {                           // back to front, in device rows
+  out.fillStyle = "#000000"; out.fillRect(0, 0, LW, 2 * LH);   // nothing behind the last screen
+  const keep = ctx;
   for (const s of screens) {
     if (s.y >= LH) continue;
-    ctx = sctx;
-    if (s.id === "wb") renderWB(); else renderTut();
-    ctx = main;
-    ctx.drawImage(scrBuf, 0, 0, LW, LH - s.y, 0, s.y, LW, LH - s.y);
+    const y2 = Math.round(s.y * 2), h2 = 2 * LH - y2;
+    if (s.lace) { ctx = lctx; renderTut(); out.drawImage(laceBuf, 0, 0, LW, h2, 0, y2, LW, h2); }
+    else { ctx = sctx; renderWB(); out.drawImage(scrBuf, 0, 0, LW, LH - s.y, 0, y2, LW, h2); }
   }
-  drawPointer();
+  ctx = out; out.setTransform(1, 0, 0, 2, 0, 0); drawPointer(); out.setTransform(1, 0, 0, 1, 0, 0);
+  ctx = keep;
 }
 function renderWB() {
   fill(0, 0, LW, LH, BL);
@@ -1044,13 +1128,14 @@ function resize() {
   let k = Math.max(1, Math.round(dh / 512));
   while (k > 1 && (dw / k < 320 || dh / (2 * k) < 180)) k--;
   LW = Math.floor(dw / k); LH = Math.floor(dh / (2 * k));
-  cv.width = scrBuf.width = LW; cv.height = scrBuf.height = LH;
-  screens.forEach(s => { s.y = Math.min(s.y, LH - 10); });
+  cv.width = lo.width = scrBuf.width = laceBuf.width = LW;
+  lo.height = scrBuf.height = LH; cv.height = laceBuf.height = 2 * LH;
+  screens.forEach(s => { s.y = Math.min(s.y, LH - titleH(s)); });
   const cssW = LW * k / dpr, cssH = LH * 2 * k / dpr;
   cv.style.width = scan.style.width = cssW + "px";
   cv.style.height = scan.style.height = cssH + "px";
   scan.style.backgroundSize = "100% " + (2 * k / dpr) + "px";
-  ctx.imageSmoothingEnabled = sctx.imageSmoothingEnabled = false;
+  ctx.imageSmoothingEnabled = sctx.imageSmoothingEnabled = lctx.imageSmoothingEnabled = out.imageSmoothingEnabled = false;
   layoutDesk(false);
   wins.forEach(w => {
     w.w = Math.min(w.w, LW); w.h = Math.min(w.h, LH);
@@ -1115,7 +1200,7 @@ cv.addEventListener("pointerdown", e => {
 
   if (!(menu && menu.sticky)) {
     const s = screenAt(p), q = { x:p.x, y:p.y - s.y };
-    if (e.button === 0 && q.y < 10) {                // a screen's title bar: depth gadgets or drag
+    if (e.button === 0 && q.y < titleH(s)) {         // a screen's title bar: depth gadgets or drag
       if (q.x >= LW - 23) scrFront(s);
       else if (q.x >= LW - 46) scrBack(s);
       else drag = { k:"screen", s, oy:q.y, py:p.y, moved:false, touch:e.pointerType !== "mouse" };
@@ -1166,7 +1251,7 @@ cv.addEventListener("pointermove", e => {
   if (e.pointerType === "mouse" && !hasMouse) { hasMouse = true; document.body.classList.add("mouse"); }
   if (drag && drag.k === "screen") {
     if (Math.abs(p.y - drag.py) > 2) drag.moved = true;
-    if (drag.moved) drag.s.y = clamp(p.y - drag.oy, 0, LH - 10);
+    if (drag.moved) drag.s.y = clamp(p.y - drag.oy, 0, LH - titleH(drag.s));
     dirty(); return;
   }
   if (mode === "wb") p = { x:p.x, y:p.y - wbY() };

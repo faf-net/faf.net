@@ -54,8 +54,9 @@ hoch wie breit). Keine Frameworks, kein Build-Schritt, keine Tracker.
   Felsen, Glühwürmchen und Schmetterlinge, erzeugte Höhlen mit steigender Schwierigkeit,
   Highscore im Browser. Pfeiltasten/WASD, Leertaste, R, Esc; am Handy Wischen oder Steuerkreuz.
 - **WOPR** auf dem Desktop führt zum WarGames-Terminal.
-- **King Tut** öffnet die Maske des Tutanchamun als Textbild auf einem eigenen Screen: 54 × 28
-  Topaz-Zeichen, jedes mit Stift- und Papierfarbe aus den vier Farbregistern. Klick schließt.
+- **King Tut** öffnet die Maske des Tutanchamun als Textbild auf einem eigenen Hi-Res-Interlace-Screen
+  (640 × 512, wie Deluxe Paint für feine Bilder): 51 × 60 Topaz-Zeichen, jedes mit Stift- und
+  Papierfarbe aus den vier Farbregistern. Klick schließt.
 - **Prefs** stellt die vier Farbregister mit R/G/B-Reglern ein, 16 Stufen je Farbe wie beim A500
   (4.096 Farben); Use gilt für den Besuch, Save dauerhaft, Reset holt die Palette zurück.
 - **Info** (Workbench-Menü, rechte Maustaste) zeigt Name, Typ, Blöcke, Bytes und Kommentar des
