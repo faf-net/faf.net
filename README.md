@@ -77,8 +77,9 @@ wide). No frameworks, no build step, no trackers.
   WebAudio. X-Copy, SCA, Byte Bandit, VirusX and Boulder Dash are homages; their names and
   trademarks belong to their respective owners.
 - Virus behaviour as described by the Amiga Virus Encyclopedia (vht-dk.dk).
-- Disk, drawer and Trashcan icons and the window gadgets follow Workbench 1.3 pixel for pixel,
-  measured from [TAWS](https://www.taws.ch/WB.html) by Michael Rupp; the artwork is © Commodore-Amiga.
+- Disk, System disk, drawer, Trashcan, Shell and Palette icons, the window gadgets and the drag bar
+  are the original Workbench 1.3 pixels, checked against a real 1.3 screen; first measured from
+  [TAWS](https://www.taws.ch/WB.html) by Michael Rupp. The artwork is © Commodore-Amiga.
 - The blue screen is a parody in its own words; Windows is a trademark of Microsoft.
 - `kickstart13.png` shows the Kickstart 1.3 artwork (© Commodore-Amiga) as a quotation.
 
