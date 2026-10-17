@@ -77,7 +77,7 @@ const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const cv = document.getElementById("scr");
 const scan = document.getElementById("scan");
 const kbd = document.getElementById("kbd");
-const ctx = cv.getContext("2d", { alpha:false, willReadFrequently:true });
+let ctx = cv.getContext("2d", { alpha:false, willReadFrequently:true });   // swapped while a screen is drawn off-canvas
 
 let LW = 640, LH = 256;                  // logical screen: hires pixels × lines
 
@@ -416,10 +416,10 @@ const cascade = () => wins.length * 14;
 function openDisk(id = "disk") {
   openWin({ id, title:"faf.net", type:"drawer", gauge:true, fill:.79, mem:18432,
     x: (LW < 520 ? 6 : Math.floor(LW * .1)) + (id === "disk" ? 0 : 24), y: 22 + (id === "disk" ? 0 : 16), w: 278, h: 136,
-    rows: [3, 3, 2],                          // About · GitHub · Workbench / System · Utilities · Games / PGP Key · Trashcan
+    rows: [3, 3, 3],                          // About · GitHub · Workbench / System · Utilities · Games / PGP Key · King Tut · Trashcan
     icons: [ mkIcon("About", "doc", openAbout), mkIcon("GitHub", "github", goGithub), mkIcon("Workbench", "palette", toggleTheme),
              mkIcon("System", "drawer", openSystem), mkIcon("Utilities", "drawer", openUtil), mkIcon("Games", "drawer", openGames),
-             mkIcon("PGP Key", "pgp", () => openPGP()), mkIcon("Trashcan", "trash", openTrash) ] });
+             mkIcon("PGP Key", "pgp", () => openPGP()), mkIcon("King Tut", "tut", openTut), mkIcon("Trashcan", "trash", openTrash) ] });
 }
 function openSystem() {
   openWin({ id:"system", title:"System", type:"drawer", gauge:false, mem:12288, x:50 + cascade(), y:40 + cascade(), w:266, h:64,
@@ -440,6 +440,120 @@ function drawPicture(c) {
   ctx.drawImage(KICK, c.x + ((c.w - dw) >> 1), c.y + ((c.h - dh) >> 1), dw, dh);
   ctx.imageSmoothingEnabled = false;
 }
+/* ---------- screens: every screen can be pulled down by its title bar ------- */
+// Back to front. The Workbench is one screen; a picture opens on a screen of its own,
+// as ShowIFF and Deluxe Paint did, and you can drag it down to look behind it.
+const scrBuf = document.createElement("canvas");
+const sctx = scrBuf.getContext("2d", { alpha:false, willReadFrequently:true });
+let screens = [{ id:"wb", y:0 }];
+const scrOf = id => screens.find(s => s.id === id);
+const wbY = () => scrOf("wb").y;
+function screenAt(p) { for (let i = screens.length - 1; i >= 0; i--) if (p.y >= screens[i].y) return screens[i]; return screens[0]; }
+function scrFront(s) { screens.splice(screens.indexOf(s), 1); screens.push(s); }
+function scrBack(s)  { screens.splice(screens.indexOf(s), 1); screens.unshift(s); }
+function closeScr(id) { screens = screens.filter(s => s.id !== id); }
+
+/* ---------- Tutankhamun: text art on its own screen ------------------------ */
+// Drawn anew from the real mask (Cairo, c. 1323 BC) as 54 x 28 Topaz cells, each with
+// a glyph, a pen and a paper colour from the four registers. A tribute to Avril
+// Harrison's Deluxe Paint picture of 1986, not a copy of it.
+// TUT_COL: one hex digit per cell = pen * 4 + paper (0 blue, 1 white, 2 black, 3 orange).
+const TUT_TXT = [
+  "                   ___@@@@@@@@@@__                    ",
+  "                 @@~ ?.....     %.~?_                 ",
+  "                _@    _..._x%   ....~_                ",
+  "               _~?    %.._&x%  @....@?_               ",
+  "              @~..%   /.x~%&%  ~...@../_              ",
+  "             @?_____   __-0&% -___@~ ..O?             ",
+  "           @@._____________&%___________&?_           ",
+  "         _~.?_-.?_..W%^~~~~~~~~?8&. _~.._@~?__        ",
+  "      _@~__..~0../x80__        __#%@~..@~--_~'?_      ",
+  "    @x~=;;_?___M_@__@@@_~%  x~_@@@____~___x_O;=/o_    ",
+  "  _^-....---___-=*@o*oox_    _oxo*x@@%-___---....-?_  ",
+  " x~=====;~~x@?%%8_*_x_#_#&  x*_].&_##8x%^8%~~;=====/, ",
+  " -.......-.O%.W8%=~~^^^~~x  o~~^^^~~=%%&.=&.-.......-_",
+  "[%%=====;~~%%_O8%%=..    #  0    ..=%%%&_@%~~;=====%%]",
+  "^........--?%o%~8%%%=.  x&  ]%  .=%%%&?%o%~--........x",
+  "]%%=====;~~~~~~~~8%%%=. *#==*@ .==%88~~~~~~~~;=====%%&",
+  "-..#%-----@_----#%8%%=._,x88%,_.=%%8%%----_%-----@_..-",
+  "]%%;:~~~~~.:~~~~=%%8%%==.~^^~.==%%%%%~~~~~:.~~~~~:=%%&",
+  "-..#&-----&%----#%%%%%%%%x-xox%%%%%%%%----#&-----#%..-",
+  "]%%;:~~~~~.:~~~~~~~~~~~~~@*Mo~~~~~~~~~~~~~:.~~~~~:=%%&",
+  "&..#&-----&%------------~MxoM~------------#&-----#%..@",
+  "@??_:~~~~~.@?8_=x~~~~~~~~W@@W~~~~~~~~%==@?&.~~~~~:?^^]",
+  "@?.?&-----&x?_.?0;?o_____M@*&_____x~;@~~_^o&-----#~.@%",
+  "&8~#:~~~~~.o_%~?__~?@@0;WMWM%]W#@@~~__^~%_o.~~~~~:0~8M",
+  "&?_%0----.&0_~?__o~~^@__________@^~~o_@~~_@&.----@o@~W",
+  "[_.~_ox-x~?0</@__~~?_____****____@~~~_@@8%@^~W^xo@~._]",
+  "/~*@_~?_%~?_.~?0W/??o,__________@@@O%W@^~._@~o_@~-@*~~",
+  "   ~^x__~?_*o~?__~~~~^@@00WW@@@0??~~~_@^~x*@@~_@o@~~  ",
+];
+const TUT_COL = [
+  "00000000000000000008ee2222233333e800000000000000000000",
+  "00000000000000000233fb22222fffffe222800000000000000000",
+  "00000000000000008bffffe222e77fff22222c0000000000000000",
+  "00000000000000082effffe22e3bbffe2222bbc000000000000000",
+  "000000000000002222bfffb2ebeebffe222bbbbe00000000000000",
+  "000000000000033eeeebfffeeb3ebfbeee3bfbbe20000000000000",
+  "000000000002bbbbbbbbbbbbbbbebbbbbbbbbbbbe2c00000000000",
+  "000000000c22ebbbbe22bbbbbbbbbbbbbbbfbe22ebb3e800000000",
+  "000000822ee22eebbbeee3bffffffffb3ebee22bbbbbe228000000",
+  "00002ebbbbb3eeebbeeebbbeebffbeebbbeeee3bbb3ebbbbe80000",
+  "008222222222eee2eeebbbbbbffffbbbbbbeee2eee222222222800",
+  "0c3bbbbbbbbbeebbbe7d1e9d6bff37dbe9d6bbbbeebbbbbbbbbbe0",
+  "02222222222be2bbbbbbb3bbbbffbb3b3bb3bbbe2ee22222222228",
+  "2bbbbbbbbbbbeebbbbbbbffffbffbffffbbbbbbeebbbbbbbbbbbb2",
+  "22222222222eb3beebbbbbffbbffbbffbbbbbeeb3be22222222222",
+  "ebbbbbbbbbbbbbbbbbbbbbbf3b773bfbbbbbbbbbbbbbbbbbbbbbbe",
+  "2223e22222be22223bbbbbbb3bbbb3bbbbbbbe2222ee22222be222",
+  "ebbbbbbbbbbbbbbbbbbbbbbbb7777bbbbbbbbbbbbbbbbbbbbbbbbe",
+  "2223e22222be22223bbbbbbbb33bbbbbbbbbbe22223e22222be222",
+  "ebbbbbbbbbbbbbbbbbbbbbbbbe3bbbbbbbbbbbbbbbbbbbbbbbbbbc",
+  "2223e22222be222222222222ee33ee2222222222223e22222be228",
+  "2eebbbbbbbbeeebbbeeeee666eeee666eeeeebbbeebbbbbbbbbee2",
+  "332ee22222b7362eeb3eecc88beee88ccee3beeee37e22222be2be",
+  "37bbbbbbbbbb37b36eeeeee3ebeebbeeeeeee63373bbbbbbbbb37c",
+  "2e37b22222bbee63b7b33b66eeeeee66b33b7b66eebe22222b7668",
+  "2e2637733eeeb3beee663333b7777b333e66ee3bbbeeebb77662e2",
+  "8eebee6373362eeee333e6eeeeeeeeeebbbbbeeee26b37bee2bee8",
+  "000ceeeee63773366eeeeeeeeeeeeeeeeeeeeeb33776e6e3ecc800",
+];
+let tutImg = null, tutPal = null;
+function tutImage() {
+  if (tutImg && tutPal === PAL) return tutImg;
+  const c = document.createElement("canvas"); c.width = TUT_TXT[0].length * 8; c.height = TUT_TXT.length * 8;
+  const keep = ctx; ctx = c.getContext("2d");
+  TUT_TXT.forEach((row, y) => [...row].forEach((ch, x) => {
+    const v = parseInt(TUT_COL[y][x], 16);
+    fill(x * 8, y * 8, 8, 8, PAL[v & 3]);
+    if (ch !== " ") text(ch, x * 8, y * 8, PAL[v >> 2]);
+  }));
+  ctx = keep; tutPal = PAL;
+  return (tutImg = c);
+}
+function openTut() {
+  if (scrOf("tut")) { scrFront(scrOf("tut")); dirty(); return; }
+  busy(1100); titleMsg = { t:"Loading Tutankhamun ...", until:performance.now() + 1100 };
+  for (let i = 0; i < 6; i++) setTimeout(() => snd("step"), 120 + i * 140);
+  setTimeout(() => { if (mode === "wb" && !scrOf("tut")) { screens.push({ id:"tut", y:0 }); dirty(); } }, 1000);
+}
+function renderTut() {
+  fill(0, 0, LW, LH, BL);
+  fill(0, 0, LW, 10, WH);
+  text(LW < 400 ? "Tutankhamun" : "Tutankhamun   click to close", 4, 1, BL);
+  depthGadgets(LW - 46, -1);
+  const im = tutImage();
+  ctx.drawImage(im, (LW - im.width) >> 1, 10 + Math.max(0, (LH - 10 - im.height) >> 1));
+}
+ICON.tut = makeIcon(28, 20, g => {            // the mask in miniature
+  g.rect(0, 0, 28, 20, 4);
+  g.poly([[9,0],[18,0],[26,11],[26,19],[1,19],[1,11]], 3, 2);
+  for (let y = 4; y < 19; y += 3) g.rect(2, y, 24, 1, 2);
+  g.ell(13, 10, 6, 7, 3, 2); g.rect(8, 3, 11, 2, 3);
+  g.rect(9, 8, 3, 1, 2); g.rect(15, 8, 3, 1, 2); g.px(10, 8, 1); g.px(16, 8, 1);
+  g.rect(13, 9, 1, 4, 2); g.rect(11, 14, 5, 1, 2);
+  g.rect(12, 17, 3, 3, 1); g.frame(12, 17, 3, 3, 2); g.rect(13, 0, 1, 3, 1);
+});
 function openUtil() {
   openWin({ id:"util", title:"Utilities", type:"drawer", gauge:false, mem:12288, x:60 + cascade(), y:50 + cascade(), w:266, h:100,
     icons: [ mkIcon("X-Copy", "xcopy", () => startXCopy()), mkIcon("VirusX", "virusx", () => openVirusX()),
@@ -624,9 +738,10 @@ function exec(raw) {
     case "help": case "?":
       out("DIR INFO DATE AVAIL VERSION ECHO TYPE");
       out("ABOUT CLOCK WOPR GITHUB PALETTE CLS ENDCLI");
-      out("XCOPY VIRUSX SYSINFO CAVES PGP REBOOT SOUND"); break;
+      out("XCOPY VIRUSX SYSINFO CAVES PGP REBOOT SOUND");
+      out("SHOWIFF TUT"); break;
     case "dir": case "list":
-      out("     Trashcan (dir)"); out("  About     Clock     GitHub    Shell");  out("  Workbench WOPR"); break;
+      out("     Trashcan (dir)"); out("  About     Clock     GitHub    Shell");  out("  Workbench WOPR      Tut.pic"); break;
     case "info":
       out("Unit Size  Used Free Full Errs Status   Name");
       out("DF0: 880K  1386  372  79%   0  Read/Write faf.net");
@@ -659,6 +774,9 @@ function exec(raw) {
     case "virusx": openVirusX(); break;
     case "sysinfo": openSysInfo(); break;
     case "caves": startCaves(); break;
+    case "showiff": case "tut":
+      if (arg && !/^(tut|king.?tut|tutankhamun)(\.pic)?$/i.test(arg)) { out("ShowIFF: can't open " + arg); break; }
+      openTut(); break;
     case "pgp": out("OpenPGP " + PGP_FPR); openPGP(); break;
     case "xcopy": case "x-copy": startXCopy(); break;
     case "sound": muted = /^off$/i.test(arg); out("Sound " + (muted ? "off" : "on")); break;
@@ -774,6 +892,19 @@ function render() {
   if (mode === "cave") { DC.draw(ctx, LW, LH, touchSeen); return; }
   if (mode === "xcopy") { renderXCopy(); drawPointer(); return; }
 
+  if (screens.length === 1 && !screens[0].y) { renderWB(); drawPointer(); return; }
+  const main = ctx;
+  fill(0, 0, LW, LH, "#000000");                     // nothing behind the last screen
+  for (const s of screens) {
+    if (s.y >= LH) continue;
+    ctx = sctx;
+    if (s.id === "wb") renderWB(); else renderTut();
+    ctx = main;
+    ctx.drawImage(scrBuf, 0, 0, LW, LH - s.y, 0, s.y, LW, LH - s.y);
+  }
+  drawPointer();
+}
+function renderWB() {
   fill(0, 0, LW, LH, BL);
   const now = performance.now();
   if (titleMsg && now > titleMsg.until) titleMsg = null;
@@ -787,7 +918,6 @@ function render() {
   if (drag && drag.k === "move") compFrame(drag.nx, drag.ny, drag.w.w, drag.w.h);
   if (drag && drag.k === "size") compFrame(drag.w.x, drag.w.y, drag.nw, drag.nh);
   if (menu) drawMenus();
-  drawPointer();
 }
 function drawPointer() {
   if (!hasMouse || ptr.x < 0) return;
@@ -806,12 +936,13 @@ function resize() {
   let k = Math.max(1, Math.round(dh / 512));
   while (k > 1 && (dw / k < 320 || dh / (2 * k) < 180)) k--;
   LW = Math.floor(dw / k); LH = Math.floor(dh / (2 * k));
-  cv.width = LW; cv.height = LH;
+  cv.width = scrBuf.width = LW; cv.height = scrBuf.height = LH;
+  screens.forEach(s => { s.y = Math.min(s.y, LH - 10); });
   const cssW = LW * k / dpr, cssH = LH * 2 * k / dpr;
   cv.style.width = scan.style.width = cssW + "px";
   cv.style.height = scan.style.height = cssH + "px";
   scan.style.backgroundSize = "100% " + (2 * k / dpr) + "px";
-  ctx.imageSmoothingEnabled = false;
+  ctx.imageSmoothingEnabled = sctx.imageSmoothingEnabled = false;
   layoutDesk(false);
   wins.forEach(w => {
     w.w = Math.min(w.w, LW); w.h = Math.min(w.h, LH);
@@ -862,7 +993,7 @@ function focusKbd() { if (shellActive()) kbd.focus({ preventScroll:true }); }
 cv.addEventListener("contextmenu", e => e.preventDefault());
 
 cv.addEventListener("pointerdown", e => {
-  const p = toL(e); ptr = p;
+  let p = toL(e); ptr = p;
   if (e.pointerType === "mouse") { hasMouse = true; document.body.classList.add("mouse"); }
   e.preventDefault();
   if (e.pointerType !== "mouse") touchSeen = true;
@@ -874,6 +1005,18 @@ cv.addEventListener("pointerdown", e => {
   if (mode === "xcopy") { xcClick(p, e.button); return; }
   try { cv.setPointerCapture(e.pointerId); } catch (_) {}
 
+  if (!(menu && menu.sticky)) {
+    const s = screenAt(p), q = { x:p.x, y:p.y - s.y };
+    if (e.button === 0 && q.y < 10) {                // a screen's title bar: depth gadgets or drag
+      if (q.x >= LW - 23) scrFront(s);
+      else if (q.x >= LW - 46) scrBack(s);
+      else drag = { k:"screen", s, oy:q.y, py:p.y, moved:false, touch:e.pointerType !== "mouse" };
+      dirty(); return;
+    }
+    if (s.id === "tut") { if (e.button === 0) { closeScr("tut"); busy(300); } dirty(); return; }   // click to exit, like ShowIFF
+    p = q;                                             // from here on: Workbench coordinates
+  } else p = { x:p.x, y:p.y - wbY() };
+
   if (e.button === 2) { menu = { sticky:false, cur:-1, ii:-1 }; updMenu(p); dirty(); return; }
   if (e.button !== 0) return;
 
@@ -881,9 +1024,6 @@ cv.addEventListener("pointerdown", e => {
     updMenu(p);
     if (p.y < 10 && MENUS.some(m => p.x >= m.x && p.x < m.x + m.w)) { dirty(); return; }
     runMenu(); menu = null; dirty(); return;
-  }
-  if (p.y < 10 && e.pointerType !== "mouse" && !winAt(p)) {
-    menu = { sticky:true, cur:-1, ii:-1 }; updMenu(p); dirty(); return;
   }
 
   const w = winAt(p);
@@ -912,9 +1052,15 @@ cv.addEventListener("pointerdown", e => {
 });
 
 cv.addEventListener("pointermove", e => {
-  const p = toL(e); ptr = p;
+  let p = toL(e); ptr = p;
   if (mode === "cave") { DC.pointer("move", p, e); return; }
   if (e.pointerType === "mouse" && !hasMouse) { hasMouse = true; document.body.classList.add("mouse"); }
+  if (drag && drag.k === "screen") {
+    if (Math.abs(p.y - drag.py) > 2) drag.moved = true;
+    if (drag.moved) drag.s.y = clamp(p.y - drag.oy, 0, LH - 10);
+    dirty(); return;
+  }
+  if (mode === "wb") p = { x:p.x, y:p.y - wbY() };
   if (menu) updMenu(p);
   if (drag) {
     const w = drag.w;
@@ -930,8 +1076,16 @@ cv.addEventListener("pointermove", e => {
 });
 
 cv.addEventListener("pointerup", e => {
-  const p = toL(e);
+  let p = toL(e);
   if (mode === "cave") { DC.pointer("up", p, e); return; }
+  if (drag && drag.k === "screen") {
+    const d = drag; drag = null;
+    if (!d.moved && d.touch && d.s.id === "wb" && !winAt({ x:p.x, y:p.y - d.s.y })) {   // touch: a tap opens the menu strip
+      menu = { sticky:true, cur:-1, ii:-1 }; updMenu({ x:p.x, y:p.y - d.s.y });
+    }
+    dirty(); return;
+  }
+  if (mode === "wb") p = { x:p.x, y:p.y - wbY() };
   if (menu && !menu.sticky && e.button === 2) { runMenu(); menu = null; }
   if (drag) {
     const w = drag.w;
@@ -980,6 +1134,10 @@ kbd.addEventListener("input", () => {
 });
 addEventListener("keyup", e => { if (mode === "cave") DC.key(e, false); });
 addEventListener("keydown", e => {
+  if (mode === "wb" && screens.length > 1 && (e.key === "Escape" || (e.altKey && /^[mn]$/i.test(e.key)))) {
+    if (e.key === "Escape") closeScr("tut"); else scrBack(screens[screens.length - 1]);   // Amiga-M: flip screens
+    e.preventDefault(); dirty(); return;
+  }
   if (e.target !== kbd && modeKey(e)) return;
   if (e.target === kbd || !shellActive() || mode !== "wb") return;
   if (shellKey(e)) { e.preventDefault(); }

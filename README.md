@@ -25,7 +25,7 @@ wide). No frameworks, no build step, no trackers.
  Desktop   faf.net · RAM DISK · DF1:NDOS · WOPR
  faf.net   About · GitHub · Workbench
            System · Utilities · Games
-           PGP Key · Trashcan
+           PGP Key · King Tut · Trashcan
  System    Kickstart · Shell · Clock
  Utilities X-Copy · VirusX · SysInfo · SCA-Virus · ByteBandit
  Games     Caves
@@ -55,6 +55,10 @@ wide). No frameworks, no build step, no trackers.
   boulders, fireflies and butterflies, generated caves of rising difficulty, high scores kept
   in the browser. Arrow keys/WASD, space, R, Esc; on phones swipe or use the on-screen pad.
 - **WOPR** on the desktop leads to the WarGames terminal.
+- **King Tut** opens Tutankhamun's mask as text art on a screen of its own: 54 × 28 Topaz
+  characters, each with pen and paper from the four colour registers. Click to close.
+- **Screens** can be pulled down by their title bars, as on a real Amiga; the depth gadgets
+  and Alt+M flip them, Esc closes the picture.
 - **PGP Key:** OpenPGP key (ed25519/cv25519, fingerprint `1E27 72BA 59E0 791E 146C CB23 5F8D 266C 7127 8827`)
   with Mail, Download and a key window with Copy. The e-mail address never appears as text in
   the page source — it is assembled at run time and only drawn onto the canvas.
@@ -67,6 +71,9 @@ wide). No frameworks, no build step, no trackers.
   WebAudio. X-Copy, SCA, Byte Bandit, VirusX and Boulder Dash are homages; their names and
   trademarks belong to their respective owners.
 - Virus behaviour as described by the Amiga Virus Encyclopedia (vht-dk.dk).
+- **King Tut** is drawn anew from the real mask (c. 1323 BC) — a tribute to Avril Harrison's
+  *Tutankhamun* for Deluxe Paint (Electronic Arts, 1986), not a copy of it.
+  About her: [The Artistry of Avril Harrison](https://scanlineartifacts.co.uk/2024/09/30/the-artistry-of-avril-harrison/).
 - `kickstart13.png` shows the Kickstart 1.3 artwork (© Commodore-Amiga) as a quotation.
 
 ## License
