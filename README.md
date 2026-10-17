@@ -29,7 +29,7 @@ wide). No frameworks, no build step, no trackers.
  Trashcan  Windows95.exe
  System    Kickstart · Shell · Clock · Prefs
  Utilities X-Copy · VirusX · SysInfo · SCA-Virus · ByteBandit · Calculator
- Games     Caves
+ Games     Caves · Bitlings
 ```
 
 - **Workbench:** drag, resize, close and depth-arrange windows; select icons (complement
@@ -42,7 +42,7 @@ wide). No frameworks, no build step, no trackers.
 - **Memory like an A500 with 512K chip RAM:** windows cost memory; when it runs low you get
   "Not enough memory", and on the third attempt in a row a Guru Meditation.
 - **AmigaShell:** `help`, `dir`, `info`, `avail`, `date`, `type about`, `version`, `xcopy`,
-  `virusx`, `sysinfo`, `caves`, `reboot`, `sound off|on`, `guru` …
+  `virusx`, `sysinfo`, `caves`, `bitlings`, `reboot`, `sound off|on`, `guru` …
 - **Clock** with diamond markers, diamond-shaped hands and the date; the **Kickstart** picture
   in a window.
 - **X-Copy:** a recreation of the original screen (Cachet, 1988) with modes, START/END, drives
@@ -55,6 +55,11 @@ wide). No frameworks, no build step, no trackers.
 - **DIAMOND CAVES:** a cave game in the spirit of Boulder Dash — digging, diamonds, falling
   boulders, fireflies and butterflies, generated caves of rising difficulty, high scores kept
   in the browser. Arrow keys/WASD, space, R, Esc; on phones swipe or use the on-screen pad.
+- **BITLINGS:** a walker puzzle in the spirit of the 1991 classic, with its own name, its own
+  little robots and eight levels of my own. Eight skills (climb, float, bomb, block, build, bash,
+  mine, dig), release rate, pause, fast forward and nuke; drawn in the four Workbench colour
+  registers, so the palette switch and Prefs recolour it. Progress stays in the browser.
+  Mouse or touch; 1–8, P, F, N, R, Esc.
 - **WOPR** on the desktop leads to the WarGames terminal.
 - **Windows95.exe** lies in the Trashcan. It requires a real computer; run it anyway and it
   crashes on a screen of its own, blue screen and all. Any key brings you back, Ctrl+Alt+Del

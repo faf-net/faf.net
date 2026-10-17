@@ -29,7 +29,7 @@ hoch wie breit). Keine Frameworks, kein Build-Schritt, keine Tracker.
  Trashcan  Windows95.exe
  System    Kickstart · Shell · Clock · Prefs
  Utilities X-Copy · VirusX · SysInfo · SCA-Virus · ByteBandit · Calculator
- Games     Caves
+ Games     Caves · Bitlings
 ```
 
 - **Workbench:** Fenster ziehen, skalieren, schließen, Tiefe; Icons auswählen (Komplementfarben,
@@ -42,7 +42,7 @@ hoch wie breit). Keine Frameworks, kein Build-Schritt, keine Tracker.
 - **Speicher wie auf einem A500 mit 512K Chip-RAM:** Fenster kosten Speicher; wird es knapp,
   kommt „Not enough memory“, beim dritten Versuch in Folge eine Guru Meditation.
 - **AmigaShell:** `help`, `dir`, `info`, `avail`, `date`, `type about`, `version`, `xcopy`,
-  `virusx`, `sysinfo`, `caves`, `reboot`, `sound off|on`, `guru` …
+  `virusx`, `sysinfo`, `caves`, `bitlings`, `reboot`, `sound off|on`, `guru` …
 - **Clock** mit Rauten, Rautenzeigern und Datum; **Kickstart**-Bild im Fenster.
 - **X-Copy:** Nachbau des Original-Bildschirms (Cachet 1988) mit Modi, START/END,
   Laufwerken und Spurrastern; COPY nach DF1: macht aus der NDOS-Diskette eine Kopie.
@@ -54,6 +54,11 @@ hoch wie breit). Keine Frameworks, kein Build-Schritt, keine Tracker.
 - **DIAMOND CAVES:** Höhlenspiel im Stil von Boulder Dash — graben, Diamanten, fallende
   Felsen, Glühwürmchen und Schmetterlinge, erzeugte Höhlen mit steigender Schwierigkeit,
   Highscore im Browser. Pfeiltasten/WASD, Leertaste, R, Esc; am Handy Wischen oder Steuerkreuz.
+- **BITLINGS:** Wusel-Puzzle im Geist des Klassikers von 1991, mit eigenem Namen, eigenen
+  kleinen Robotern und acht eigenen Leveln. Acht Fähigkeiten (klettern, schweben, sprengen,
+  blocken, bauen, tunneln, schräg graben, graben), Auswurfrate, Pause, Zeitraffer und Atombombe;
+  gezeichnet in den vier Workbench-Farbregistern, Palette und Prefs färben es also mit um.
+  Der Fortschritt bleibt im Browser. Maus oder Touch; 1–8, P, F, N, R, Esc.
 - **WOPR** auf dem Desktop führt zum WarGames-Terminal.
 - **Windows95.exe** liegt im Trashcan. Es braucht einen richtigen Computer; wer es trotzdem
   startet, bekommt auf einem eigenen Screen den Bluescreen. Eine Taste führt zurück,

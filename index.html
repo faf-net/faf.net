@@ -756,7 +756,7 @@ const INFO_NOTE = {
   "PGP Key":"5F8D 266C 7127 8827", "Windows95.exe":"requires a real computer", "Trashcan":"empty. honest.",
   "Kickstart":"34.5", "Shell":"1> _", "Clock":"tick", "Prefs":"4096 colours", "Calculator":"no slide rule needed",
   "X-Copy":"copy only your own disks", "VirusX":"trust no bootblock", "SysInfo":"68000 at 7.09 MHz",
-  "SCA-Virus":"harmless re-enactment", "ByteBandit":"harmless re-enactment", "Caves":"boulders included",
+  "SCA-Virus":"harmless re-enactment", "ByteBandit":"harmless re-enactment", "Caves":"boulders included", "Bitlings":"mind the gap",
   "faf.net":"FAF Ain't Falken", "RAM DISK":"gone after reboot", "DF1:NDOS":"", "WOPR":"SHALL WE PLAY A GAME?"
 };
 function openInfo(ic) {
@@ -1064,7 +1064,7 @@ function exec(raw) {
       out("DIR INFO DATE AVAIL VERSION ECHO TYPE");
       out("ABOUT CLOCK WOPR GITHUB PALETTE CLS ENDCLI");
       out("XCOPY VIRUSX SYSINFO CAVES PGP REBOOT SOUND");
-      out("PREFS CALCULATOR WINDOWS95.EXE"); break;
+      out("PREFS CALCULATOR BITLINGS WINDOWS95.EXE"); break;
     case "dir": case "list":
       out("     Trashcan (dir)"); out("  About     Clock     GitHub    Shell");  out("  Workbench WOPR"); break;
     case "info":
@@ -1099,6 +1099,7 @@ function exec(raw) {
     case "virusx": openVirusX(); break;
     case "sysinfo": openSysInfo(); break;
     case "caves": startCaves(); break;
+    case "bitlings": case "bits": startBits(); break;
     case "prefs": case "preferences": openPrefs(); break;
     case "calculator": case "calc": openCalc(); break;
     case "windows95.exe": case "windows95": case "win95": case "win": openWin95(); break;
@@ -1217,6 +1218,7 @@ function paint() {
   if (mode === "sca") { renderSCA(); return; }
   if (mode === "bbdark") { renderBBDark(); return; }
   if (mode === "cave") { DC.draw(ctx, LW, LH, touchSeen); return; }
+  if (mode === "bits") { BT.draw(ctx, LW, LH); return; }
   if (mode === "xcopy") { renderXCopy(); drawPointer(); return; }
 
   renderWB(); drawPointer();
@@ -1334,6 +1336,7 @@ cv.addEventListener("pointerdown", e => {
   e.preventDefault();
   if (e.pointerType !== "mouse") touchSeen = true;
   if (mode === "cave") { try { cv.setPointerCapture(e.pointerId); } catch (_) {} DC.pointer("down", p, e); return; }
+  if (mode === "bits") { try { cv.setPointerCapture(e.pointerId); } catch (_) {} BT.pointer("down", p, e); return; }
   if (mode === "sca") { endSCA(); return; }
   if (mode === "bbdark") { bbClick(); return; }
   if (mode === "boot") { skipBoot(); return; }
@@ -1391,6 +1394,7 @@ cv.addEventListener("pointerdown", e => {
 cv.addEventListener("pointermove", e => {
   let p = toL(e); ptr = p;
   if (mode === "cave") { DC.pointer("move", p, e); return; }
+  if (mode === "bits") { if (e.pointerType === "mouse") hasMouse = true; BT.pointer("move", p, e); return; }
   if (e.pointerType === "mouse" && !hasMouse) { hasMouse = true; document.body.classList.add("mouse"); }
   if (drag && drag.k === "screen") {
     if (Math.abs(p.y - drag.py) > 2) drag.moved = true;
@@ -1416,6 +1420,7 @@ cv.addEventListener("pointermove", e => {
 cv.addEventListener("pointerup", e => {
   let p = toL(e);
   if (mode === "cave") { DC.pointer("up", p, e); return; }
+  if (mode === "bits") { BT.pointer("up", p, e); return; }
   if (drag && drag.k === "screen") {
     const d = drag; drag = null;
     if (!d.moved && d.touch && d.s.id === "wb" && !winAt({ x:p.x, y:p.y - d.s.y })) {   // touch: a tap opens the menu strip
@@ -1457,6 +1462,7 @@ function shellKey(e) {
 }
 function modeKey(e) {
   if (mode === "cave") { DC.key(e, true); return true; }
+  if (mode === "bits") { BT.key(e, true); return true; }
   if (mode === "bbdark") { if (e.altKey && (e.key === " " || e.code === "Space")) bbWake(); e.preventDefault(); return true; }
   if (mode === "xcopy" && (e.key === "Escape" || e.key === "q")) { XC.abort = true; mode = "wb"; dirty(); return true; }
   return false;
@@ -1471,7 +1477,7 @@ kbd.addEventListener("input", () => {
   }
   dirty();
 });
-addEventListener("keyup", e => { if (mode === "cave") DC.key(e, false); });
+addEventListener("keyup", e => { if (mode === "cave") DC.key(e, false); if (mode === "bits") BT.key(e, false); });
 addEventListener("keydown", e => {
   if (calcKey(e)) return;
   if (mode === "wb" && screens.length > 1 && e.altKey && /^[mn]$/i.test(e.key)) {   // Amiga-M: flip screens
@@ -1496,7 +1502,7 @@ addEventListener("keydown", e => {
 /* ====================================================================== */
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-const ANIM = new Set(["sca", "xcopy", "bbdark", "cave"]);
+const ANIM = new Set(["sca", "xcopy", "bbdark", "cave", "bits"]);
 let animOn = false;
 function anim() {
   if (animOn) return;
@@ -2292,6 +2298,591 @@ const DC = (() => {
   function stop() { held = []; touchDir = -1; if (mode === "cave") { mode = "wb"; dirty(); } }
   return { start, stop, draw, key, pointer, _dbg: { get st() { return st; }, newGame, tick, get grid() { return grid; } } };
 })();
+/* ---------- BITLINGS — a walker puzzle in the spirit of the 1991 classic of the genre.
+   Own name, own little robots, own eight levels, own sounds. Drawn in the four Workbench
+   colour registers, so Preferences and the palette switch reach it too.
+   320×200 lowres screen: a 320×160 playfield above the skill panel. */
+ICON.bits = makeIcon(32, 20, g => {
+  g.rect(0, 0, 32, 20, 4);
+  ["..o..", ".ooo.", ".oodo", "..w..", ".www.", ".www.", "..w..", ".w.w.", "w...w"].forEach((r, y) =>
+    [...r].forEach((ch, x) => { if (ch !== ".") g.rect(1 + x * 2, 1 + y * 2, 2, 2, ch === "o" ? 3 : ch === "w" ? 1 : 2); }));
+  for (let i = 0; i < 5; i++) { g.rect(13 + i * 4, 17 - i * 3, 6, 2, 3); g.rect(13 + i * 4, 19 - i * 3, 6, 1, 2); }
+});
+const BT = (() => {
+  const PW = 320, PH = 160, AIR = 0, EARTH = 1, STEEL = 2, WATER = 3, BRICK = 4;
+  const SPLAT = 56, TICK = 60, FASTTICK = 15, BOMBT = 85;
+  const SK = ["CLIMB", "FLOAT", "BOMB", "BLOCK", "BUILD", "BASH", "MINE", "DIG"];
+  const DOER = { walk:"WALKER", fall:"FALLER", float:"FLOATER", climb:"CLIMBER", block:"BLOCKER", build:"BUILDER",
+                 shrug:"BUILDER", bash:"BASHER", mine:"MINER", dig:"DIGGER" };
+  const LIVE = new Set(Object.keys(DOER)), GROUND = new Set(["walk", "shrug", "build", "bash", "mine", "dig"]);
+  const mat = new Uint8Array(PW * PH), tex = new Uint8Array(PW * PH), fb = new Uint8Array(320 * 200);
+  for (let i = 0; i < tex.length; i++) { let h = Math.imul(i + 1, 0x9E3779B1); h ^= h >>> 15; h = Math.imul(h, 0x85EBCA77); h ^= h >>> 13; tex[i] = h >>> 24; }
+
+  /* -- the eight levels: terrain is drawn with a few shapes, then played pixel by pixel -- */
+  const LV = [
+    { name:"Just Dig", n:10, need:5, rate:50, time:4, sk:[0,0,0,0,0,0,0,3], hatch:[70,18], exit:[250,109],
+      hint:"PICK DIG, THEN CLICK A BITLING", map(e) {
+        e.rect(0, 60, 320, 12); e.ell(118, 60, 26, 3); e.ell(214, 61, 34, 3);
+        for (const [x, w, h] of [[34, 8, 6], [92, 10, 9], [170, 6, 5], [268, 9, 7]]) e.hang(x, 72, w, h);
+        e.rect(0, 110, 320, 50); e.ell(130, 111, 44, 4); e.ell(30, 112, 28, 3);
+      } },
+    { name:"Stairway", n:10, need:8, rate:50, time:4, sk:[0,0,0,0,3,0,0,0], hatch:[40,78], exit:[278,119],
+      hint:"BUILD A STAIR OVER THE WALL", map(e) {
+        e.rect(0, 0, 320, 8); for (const [x, w, h] of [[30, 10, 12], [110, 14, 18], [200, 8, 9], [260, 12, 15]]) e.hang(x, 8, w, h);
+        e.rect(0, 120, 320, 40); e.ell(46, 121, 30, 3); e.ell(240, 121, 40, 3);
+        e.rect(152, 108, 18, 12); e.ell(161, 108, 9, 1);
+      } },
+    { name:"Tunnel Vision", n:15, need:12, rate:50, time:5, sk:[0,0,0,0,0,3,0,0], hatch:[40,86], exit:[290,119],
+      hint:"BASH A WAY THROUGH THE HILL", map(e) {
+        e.rect(0, 0, 320, 6); for (const [x, w, h] of [[20, 8, 10], [70, 12, 16], [250, 10, 14], [300, 8, 8]]) e.hang(x, 6, w, h);
+        e.rect(0, 120, 320, 40); e.ell(176, 120, 40, 72); e.ell(160, 60, 14, 10); e.ell(196, 72, 12, 8);
+        e.ell(250, 121, 24, 3);
+      } },
+    { name:"Hold the Line", n:20, need:15, rate:40, time:5, sk:[0,0,2,2,4,0,0,0], hatch:[40,38], exit:[292,79],
+      hint:"BLOCK THE CROWD, BRIDGE THE LAKE", map(e) {
+        e.rect(0, 140, 320, 20, WATER);
+        e.rect(0, 80, 172, 20); e.ell(86, 100, 80, 14); e.hang(30, 112, 10, 10); e.hang(120, 110, 12, 12);
+        e.rect(250, 80, 70, 80); e.ell(250, 120, 8, 30);
+      } },
+    { name:"Mind the Drop", n:15, need:12, rate:50, time:5, sk:[0,0,0,0,0,0,3,0], hatch:[30,14], exit:[292,129],
+      hint:"THE CLIFF IS TOO HIGH. MINE DOWN", map(e) {
+        e.rect(0, 50, 200, 110); e.ell(60, 50, 30, 3); e.ell(140, 51, 22, 2);
+        e.rect(188, 38, 12, 12, STEEL); e.rect(0, 140, 200, 20, STEEL);
+        e.rect(200, 130, 120, 30); e.ell(300, 130, 20, 3);
+      } },
+    { name:"Up and Over", n:10, need:8, rate:30, time:4, sk:[10,10,0,0,0,0,0,0], hatch:[50,92], exit:[286,149],
+      hint:"CLIMB IT, THEN FLOAT DOWN", map(e) {
+        e.rect(0, 130, 130, 30); e.ell(60, 131, 34, 3);
+        e.rect(130, 30, 26, 130); e.ell(143, 30, 13, 4);
+        e.rect(156, 150, 164, 10); e.ell(230, 151, 30, 2);
+      } },
+    { name:"Steel Works", n:15, need:12, rate:50, time:5, sk:[0,0,0,0,2,2,0,2], hatch:[40,14], exit:[300,103],
+      hint:"STEEL WILL NOT DIG OR BASH", map(e) {
+        e.rect(0, 140, 320, 20, WATER);
+        e.rect(0, 50, 320, 10, STEEL); e.rect(150, 50, 40, 10);
+        e.rect(100, 104, 220, 10); e.rect(94, 60, 6, 54, STEEL);
+        for (const [x, w, h] of [[130, 10, 10], [190, 8, 7], [290, 12, 14]]) e.hang(x, 114, w, h);
+        e.rect(200, 92, 6, 12, STEEL); e.rect(240, 60, 30, 44);
+      } },
+    { name:"The Long Way Down", n:20, need:15, rate:50, time:6, sk:[1,1,2,2,3,2,0,2], hatch:[30,4], exit:[302,119],
+      hint:"EVERYTHING YOU LEARNED", map(e) {
+        e.rect(0, 140, 320, 20, WATER);
+        e.rect(0, 34, 110, 26); e.hang(40, 60, 10, 8); e.rect(104, 22, 6, 12, STEEL);
+        e.rect(0, 86, 150, 10); e.hang(20, 96, 8, 8); e.hang(90, 96, 12, 12);
+        e.rect(186, 120, 134, 40); e.rect(186, 108, 6, 12, STEEL); e.rect(246, 40, 30, 80);
+      } }
+  ];
+  const put = (x, y, t) => { if (x >= 0 && y >= 0 && x < PW && y < PH) mat[y * PW + x] = t; };
+  const ED = {
+    rect(x, y, w, h, t = EARTH) { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) put(i, j, t); },
+    ell(cx, cy, rx, ry, t = EARTH) {
+      for (let j = -ry; j <= ry; j++) { const hw = Math.round(rx * Math.sqrt(1 - (j * j) / (ry * ry))); for (let i = -hw; i <= hw; i++) put(cx + i, cy + j, t); }
+    },
+    hang(x, y, w, h) { for (let j = 0; j < h; j++) { const hw = Math.round(w / 2 * (1 - j / h)); for (let i = -hw; i <= hw; i++) put(x + i, y + j, EARTH); } }
+  };
+  const M_ = (x, y) => x < 0 || y < 0 || x >= PW || y >= PH ? AIR : mat[y * PW + x];
+  function solid(x, y) {
+    if (x < 0 || x >= PW) return true;
+    if (y < 0 || y >= PH) return false;
+    const m = mat[y * PW + x]; return m === EARTH || m === STEEL || m === BRICK;
+  }
+  const out = x => x < 0 || x >= PW;
+  const cut = (x, y) => { if (x >= 0 && y >= 0 && x < PW && y < PH) { const i = y * PW + x; if (mat[i] === EARTH || mat[i] === BRICK) mat[i] = AIR; } };
+
+  /* -- state -- */
+  let st = "title", lv = 0, L = LV[0], crs = [], parts = [], sk = [], T = 0, acc = 0, last = 0;
+  let spawned = 0, saved = 0, spawnT = 0, rate = 50, sel = 4, paused = false, fast = false, nuked = false, nukeAsk = 0, endAt = 0, timeUp = false;
+  let maxLv = 1, best = [], cur = { x:-99, y:-99 }, hover = null, hoverN = 0, rateHold = 0, rateNext = 0, result = null;
+  try { maxLv = Math.min(LV.length, Math.max(1, +localStorage.getItem("faf-bits-max") || 1)); best = JSON.parse(localStorage.getItem("faf-bits-best") || "[]"); } catch (_) {}
+  if (!Array.isArray(best)) best = [];
+
+  function load(i) {
+    lv = i; L = LV[i]; mat.fill(AIR); L.map(ED);
+    crs = []; parts = []; sk = L.sk.slice(); T = 0; acc = 0; spawned = 0; saved = 0; spawnT = 0; rate = L.rate;
+    paused = false; fast = false; nuked = false; nukeAsk = 0; endAt = 0; timeUp = false; result = null;
+    sel = sk.findIndex(n => n > 0); if (sel < 0) sel = 4;
+  }
+  const interval = () => Math.round(4 + (99 - rate) * .5);
+  const limit = () => L.time * 1000;
+  const alive = c => LIVE.has(c.st);
+  const busyC = c => c.st !== "dead" && c.st !== "saved";
+
+  /* -- the bitlings -- */
+  function spawn() { crs.push({ x:L.hatch[0], y:L.hatch[1] + 10, dir:1, st:"fall", fd:0, t:0, bricks:0, climber:false, floater:false, bomb:-1, n:spawned }); spawned++; }
+  function blockedBy(c, nx) {
+    for (const b of crs) {
+      if (b === c || b.st !== "block" || Math.abs(b.y - c.y) > 9) continue;
+      if ((c.dir > 0 && c.x < b.x && nx >= b.x - 3) || (c.dir < 0 && c.x > b.x && nx <= b.x + 3)) return true;
+    }
+    return false;
+  }
+  function settle(c, d = 0) {                      // follow the ground down a few pixels, or start falling
+    while (d < 3 && !solid(c.x, c.y + 1)) { c.y++; d++; }
+    if (!solid(c.x, c.y + 1)) { c.st = "fall"; c.fd = d; }
+  }
+  function walk(c) {
+    const nx = c.x + c.dir;
+    if (out(nx) || blockedBy(c, nx)) { c.dir = -c.dir; return; }
+    if (solid(nx, c.y)) {
+      let h = 1; while (h <= 6 && solid(nx, c.y - h)) h++;
+      if (h > 6) { if (c.climber) { c.st = "climb"; c.t = 0; } else c.dir = -c.dir; return; }
+      c.x = nx; c.y -= h; return;
+    }
+    c.x = nx; settle(c);
+  }
+  function fall(c) {
+    const n = c.st === "float" ? 1 : 3;
+    for (let i = 0; i < n; i++) {
+      if (solid(c.x, c.y + 1)) {
+        const hard = c.st === "fall" && c.fd > SPLAT;
+        c.st = hard ? "splat" : "walk"; c.t = 0; c.fd = 0;
+        if (hard) sfx("splat");
+        return;
+      }
+      c.y++; c.fd++;
+      if (c.y >= PH + 4 || M_(c.x, c.y) === WATER) return;
+    }
+    if (c.st === "fall" && c.floater && c.fd > 14) c.st = "float";
+  }
+  function climb(c) {
+    c.t++;
+    if (solid(c.x, c.y - 9)) { c.dir = -c.dir; c.x += c.dir; c.st = "fall"; c.fd = 0; return; }   // an overhang: let go
+    c.y--;
+    if (!solid(c.x + c.dir, c.y)) { c.x += c.dir; c.st = "walk"; }
+  }
+  function build(c) {
+    if (++c.t % 8) return;
+    for (let k = 0; k < 6; k++) { const x = c.x + c.dir * k; if (!out(x) && c.y >= 0 && c.y < PH && mat[c.y * PW + x] === AIR) mat[c.y * PW + x] = BRICK; }
+    c.bricks--;
+    if (c.bricks > 0 && c.bricks <= 3) sfx("clink");
+    c.y--;
+    for (let k = 0; k < 4; k++) {
+      const nx = c.x + c.dir;
+      if (out(nx) || solid(nx, c.y - 8)) { c.dir = -c.dir; c.st = "walk"; return; }   // head bumps: back down
+      if (solid(nx, c.y)) { c.st = "shrug"; c.t = 0; return; }                          // the stair meets the ground
+      c.x = nx;
+    }
+    if (c.bricks <= 0) { c.st = "shrug"; c.t = 0; }
+  }
+  function bash(c) {
+    if (++c.t % 2) return;
+    let any = false;
+    for (let k = 1, far = c.t < 24 ? 14 : 8; k <= far; k++) for (let j = 0; j <= 8; j++) {
+      const x = c.x + c.dir * k, y = c.y - j;
+      if (k <= 5 && M_(x, y) === STEEL) { c.st = "walk"; sfx("tink"); return; }
+      if (!out(x) && solid(x, y)) any = true;
+    }
+    if (!any) { c.st = "walk"; return; }
+    for (let k = 1; k <= 5; k++) for (let j = 0; j <= 8; j++) cut(c.x + c.dir * k, c.y - j);
+    c.x += c.dir; settle(c);
+  }
+  function mine(c) {
+    if (++c.t % 3) return;
+    let any = false;
+    for (let k = 1; k <= 4; k++) for (let j = -1; j <= 8; j++) {
+      const x = c.x + c.dir * k, y = c.y - j;
+      if (M_(x, y) === STEEL) { c.st = "walk"; sfx("tink"); return; }
+      if (!out(x) && solid(x, y)) any = true;
+    }
+    if (!any) { c.st = "walk"; return; }
+    for (let k = 1; k <= 4; k++) for (let j = -1; j <= 8; j++) cut(c.x + c.dir * k, c.y - j);
+    c.x += c.dir; c.y++; settle(c);
+  }
+  function dig(c) {
+    if (++c.t % 2) return;
+    const y = c.y + 1; let any = false;
+    for (let k = -2; k <= 2; k++) if (M_(c.x + k, y) === STEEL) { c.st = "walk"; sfx("tink"); return; }
+    for (let k = -4; k <= 4; k++) if (solid(c.x + k, y) && !out(c.x + k)) { any = true; cut(c.x + k, y); }
+    if (!any) { c.st = "fall"; c.fd = 0; return; }
+    c.y++;
+  }
+  function explode(c) {
+    for (let j = -11; j <= 11; j++) for (let i = -9; i <= 9; i++) if ((i * i) / 81 + (j * j) / 121 <= 1) cut(c.x + i, c.y - 4 + j);
+    for (let k = 0; k < 28; k++) parts.push({ x:c.x, y:c.y - 4, vx:(Math.random() - .5) * 4, vy:-Math.random() * 3.2 - .4, life:22 + Math.random() * 18 | 0, c:k & 1 });
+    c.st = "dead"; sfx("pop");
+  }
+  const atExit = c => Math.abs(c.x - L.exit[0]) <= 3 && c.y >= L.exit[1] - 6 && c.y <= L.exit[1] + 2;
+  function step(c) {
+    if (!alive(c)) {
+      if ((c.st === "splat" || c.st === "drown") && ++c.t >= 16) c.st = "dead";
+      if (c.st === "exit" && ++c.t >= 10) { c.st = "saved"; saved++; }
+      return;
+    }
+    if (c.bomb > 0 && --c.bomb === 0) { explode(c); return; }
+    switch (c.st) {
+      case "walk": walk(c); break;
+      case "fall": case "float": fall(c); break;
+      case "climb": climb(c); break;
+      case "block": if (!solid(c.x, c.y + 1)) { c.st = "fall"; c.fd = 0; } break;
+      case "build": build(c); break;
+      case "shrug": if (++c.t >= 16) c.st = "walk"; break;
+      case "bash": bash(c); break;
+      case "mine": mine(c); break;
+      case "dig": dig(c); break;
+    }
+    if (!alive(c)) return;
+    if (c.y >= PH + 4) { c.st = "dead"; sfx("lost"); return; }
+    if (M_(c.x, c.y) === WATER || M_(c.x, c.y + 1) === WATER) { c.st = "drown"; c.t = 0; sfx("drown"); return; }
+    if (c.st !== "block" && atExit(c)) { c.st = "exit"; c.t = 0; sfx("yay"); }
+  }
+  function canDo(c, k) {
+    if (!alive(c)) return false;
+    switch (k) {
+      case 0: return !c.climber;
+      case 1: return !c.floater;
+      case 2: return c.bomb < 0;
+      case 3: return GROUND.has(c.st);
+      case 4: return GROUND.has(c.st) && c.st !== "build";
+      case 5: return GROUND.has(c.st) && c.st !== "bash";
+      case 6: return GROUND.has(c.st) && c.st !== "mine";
+      case 7: return GROUND.has(c.st) && c.st !== "dig";
+    }
+    return false;
+  }
+  function give(c, k) {
+    if (!c || sk[k] <= 0 || !canDo(c, k)) return false;
+    sk[k]--;
+    if (k === 0) c.climber = true;
+    else if (k === 1) c.floater = true;
+    else if (k === 2) c.bomb = BOMBT;
+    else { c.st = ["block", "build", "bash", "mine", "dig"][k - 3]; c.t = k === 4 ? 7 : 0; c.bricks = 12; }
+    sfx("pick"); return true;
+  }
+  function under(gx, gy, k) {
+    let bestC = null, bd = 1e9, n = 0;
+    for (const c of crs) {
+      if (!alive(c)) continue;
+      const dx = Math.abs(c.x - gx), dy = Math.abs(c.y - 4 - gy);
+      if (dx > 5 || dy > 7) continue;
+      n++;
+      const d = dx + dy + (k >= 0 && !canDo(c, k) ? 100 : 0);
+      if (d < bd) { bd = d; bestC = c; }
+    }
+    return { c:bestC, n };
+  }
+  function tick() {
+    T++;
+    if (T >= 20 && spawned < L.n && !nuked && --spawnT <= 0) { spawn(); spawnT = interval(); }
+    if (T === 4) sfx("door");
+    for (const c of crs) step(c);
+    for (const p of parts) { p.x += p.vx; p.y += p.vy; p.vy += .2; p.life--; }
+    parts = parts.filter(p => p.life > 0 && p.y < PH);
+    if (!endAt) {
+      if (T >= limit()) { timeUp = true; endAt = T + 1; }
+      else if ((spawned >= L.n || nuked) && !crs.some(busyC)) endAt = T + 25;
+    } else if (T >= endAt) finish();
+  }
+  function finish() {
+    const pct = Math.floor(saved * 100 / L.n), needPct = Math.floor(L.need * 100 / L.n), ok = saved >= L.need;
+    result = { pct, needPct, ok };
+    if (ok) maxLv = Math.max(maxLv, Math.min(LV.length, lv + 2));
+    best[lv] = Math.max(best[lv] || 0, pct);
+    try { localStorage.setItem("faf-bits-max", String(maxLv)); localStorage.setItem("faf-bits-best", JSON.stringify(best)); } catch (_) {}
+    st = "result"; sfx(ok ? "win" : "fail");
+  }
+  function nuke() {
+    nuked = true; let k = 0;
+    for (const c of crs) if (alive(c) && c.bomb < 0) c.bomb = BOMBT + (k++ & 7);
+    sfx("pick");
+  }
+
+  /* -- sound -- */
+  function sfx(k) {
+    const a = ac(); if (!a) return;
+    const t = a.currentTime;
+    if (k === "pick") { tone(a, t, .05, 660, .05); tone(a, t + .04, .05, 990, .04); }
+    if (k === "sel") tone(a, t, .03, 1320, .03);
+    if (k === "door") for (let i = 0; i < 6; i++) tone(a, t + i * .06, .08, 180 + i * 50, .04, "triangle");
+    if (k === "yay") [784, 1047, 1319].forEach((f, i) => tone(a, t + i * .05, .07, f, .035, "triangle"));
+    if (k === "splat") noise(a, t, .18, .35, "lowpass", 500);
+    if (k === "drown") [520, 390, 260].forEach((f, i) => tone(a, t + i * .08, .1, f, .04, "sine"));
+    if (k === "pop") { noise(a, t, .4, .45, "lowpass", 1200); tone(a, t, .2, 90, .06, "sawtooth"); }
+    if (k === "clink") tone(a, t, .04, 1760, .03);
+    if (k === "tink") tone(a, t, .06, 2400, .03, "triangle");
+    if (k === "lost") tone(a, t, .2, 110, .04, "triangle");
+    if (k === "win") [523, 659, 784, 1047].forEach((f, i) => tone(a, t + i * .1, .14, f, .05, "triangle"));
+    if (k === "fail") [392, 330, 262].forEach((f, i) => tone(a, t + i * .14, .18, f, .05, "triangle"));
+  }
+
+  /* -- drawing: everything goes into a 4-colour index buffer, like a real 2-bitplane screen -- */
+  let D = 2, Mc = 0, DIM = 0;                      // the darker and the lighter of the two dark registers; dim text
+  let SCR = null, sg = null, img = null, u32 = null;
+  const lum = c => c[0] * .3 + c[1] * .59 + c[2] * .11;
+  function pset(x, y, c) { if (x >= 0 && y >= 0 && x < 320 && y < 200) fb[y * 320 + x] = c; }
+  function prect(x, y, w, h, c) {
+    const x0 = Math.max(0, x), y0 = Math.max(0, y), x1 = Math.min(320, x + w), y1 = Math.min(200, y + h);
+    for (let j = y0; j < y1; j++) fb.fill(c, j * 320 + x0, j * 320 + x1);
+  }
+  function ptext(s, x, y, c, sx = 1, sy = 1) {
+    s = String(s);
+    for (let k = 0; k < s.length; k++) {
+      const g = gi(s[k]);
+      for (let r = 0; r < 8; r++) { const b = FB[g * 8 + r]; if (b) for (let i = 0; i < 8; i++) if (b & (128 >> i)) prect(x + (k * 8 + i) * sx, y + r * sy, sx, sy, c); }
+    }
+  }
+  const ctext = (s, y, c, sx = 1, sy = 1) => ptext(s, (320 - String(s).length * 8 * sx) >> 1, y, c, sx, sy);
+  const colOf = ch => ch === "o" ? 3 : ch === "w" ? 1 : ch === "d" ? D : Mc;
+  function spr(rows, x, y, dir, ax = 2, clipY = 999) {
+    const h = rows.length;
+    for (let j = 0; j < h; j++) {
+      const r = rows[j], py = y - (h - 1 - j);
+      if (py > clipY) continue;
+      for (let i = 0; i < r.length; i++) if (r[i] !== ".") pset(x + (i - ax) * dir, py, colOf(r[i]));
+    }
+  }
+  const HEAD = ["..o..", ".ooo.", ".oodo", "..w.."];
+  const S = {
+    walk: [[".www.", ".www.", "..w..", ".w.w.", "w...w"], [".www.", ".www.", "..w..", "..w..", "..ww."],
+           [".www.", ".www.", "..w..", ".w.w.", ".w..w"], [".www.", ".www.", "..w..", "..w..", ".ww.."]].map(b => HEAD.concat(b)),
+    fall: [["w.o.w", "wooow", ".oodo", "..w..", ".www.", ".www.", "..w..", ".w.w.", ".w.w."],
+           [".wo.w", "wooow", ".oodo", "..w..", ".www.", ".www.", "..w..", ".w.w.", "..w.w"]],
+    climb: [["...o.", "..ooo", "..ood", "...w.", "..www", "...ww", "...w.", "..w..", "...w."],
+            ["...o.", "..ooo", "..ood", "...ww", "..ww.", "...w.", "...w.", "...w.", "..w.."]],
+    block: [HEAD.concat(["wwwww", ".www.", "..w..", ".w.w.", "w...w"]), ["w.o.w", "wooow", ".oodo", "..w..", ".www.", ".www.", "..w..", ".w.w.", "w...w"]],
+    build: [[".....", "..o..", ".ooo.", ".oodo", "..w..", ".wwwo", ".www.", ".w.w.", "ww.w."],
+            [".....", "..o..", ".ooo.", ".oodo", "..w.o", ".www.", ".www.", ".w.w.", "ww.w."]],
+    shrug: [["w.o.w", "wooow", ".oodo", "..w..", ".www.", ".www.", "..w..", ".w.w.", "w...w"]],
+    bash: [HEAD.concat([".wwwww", ".www..", "..w...", ".w.w..", "w...w."]), ["..o...", ".ooo..", ".oodo.", "..w..w", ".www.w", ".www..", "..w...", ".w.w..", "w...w."]],
+    mine: [["..o...", ".ooo..", ".oodo.", "..w.w.", ".wwww.", ".www.w", "..w...", ".w.w..", "w...w."],
+           ["..o...", ".ooo.w", ".oodow", "..w.w.", ".www..", ".www..", "..w...", ".w.w..", "w...w."]],
+    dig: [[".....", "..o..", ".ooo.", ".oodo", "..w..", "wwwww", ".www.", "w.w.w", ".w.w."],
+          [".....", "..o..", ".ooo.", ".oodo", "..w..", ".www.", "wwwww", ".w.w.", "w.w.w"]],
+    splat: [["...o...", "..ooo..", ".wwwww.", "w.www.w"], [".......", "..ooo..", "ow.w.wo", "wwwwwww"], [".......", ".......", "o..o..o", "w.www.w"]],
+    rotor: [["wwwww", "..w.."], [".www.", "..w.."]]
+  };
+  const TINY = { 1:[".1.", "11.", ".1.", ".1.", "111"], 2:["111", "..1", "111", "1..", "111"], 3:["111", "..1", ".11", "..1", "111"],
+                 4:["1.1", "1.1", "111", "..1", "..1"], 5:["111", "1..", "111", "..1", "111"] };
+  function tiny(n, x, y) { (TINY[n] || TINY[5]).forEach((r, j) => { for (let i = 0; i < 3; i++) if (r[i] === "1") pset(x + i, y + j, 1); }); }
+  const EXIT = ["..o.........o..", ".ooo.......ooo.", "wwwwwwwwwwwwwww", "wmmmmmmmmmmmmmw", "wm...........mw", "wm.....w.....mw",
+                "wm.....w.....mw", "wm.....w.....mw", "wm...wwwww...mw", "wm....www....mw", "wm.....w.....mw", "wm...........mw",
+                "wm.ooooooooo.mw", "wm...........mw", "wm...........mw", "ww...........ww"];
+  function drawExit(now) {
+    const [ex, ey] = L.exit, blink = (now / 300 | 0) & 1;
+    EXIT.forEach((r, j) => { for (let i = 0; i < 15; i++) {
+      let ch = r[i]; if (ch === ".") continue;
+      if (ch === "o" && j < 2 && blink === (i < 7 ? 1 : 0)) continue;
+      pset(ex - 7 + i, ey - 15 + j, colOf(ch));
+    } });
+  }
+  function pline(x0, y0, x1, y1, c) {
+    const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1);
+    for (let i = 0; i <= n; i++) pset(Math.round(x0 + (x1 - x0) * i / n), Math.round(y0 + (y1 - y0) * i / n), c);
+  }
+  function drawHatch() {
+    const [hx, hy] = L.hatch;
+    prect(hx - 10, hy, 21, 6, 1); prect(hx - 9, hy + 1, 19, 4, Mc);
+    for (let i = 0; i < 4; i++) prect(hx - 8 + i * 5, hy + 2, 3, 2, 3);
+    const a = Math.min(1, T / 16) * Math.PI / 2, ca = Math.cos(a) * 9, sa = Math.sin(a) * 9;
+    pline(hx - 9, hy + 6, hx - 9 + ca, hy + 6 + sa, 1); pline(hx + 9, hy + 6, hx + 9 - ca, hy + 6 + sa, 1);
+  }
+  function drawWorld(now) {
+    const wt = now / 140 | 0;
+    for (let y = 0; y < PH; y++) for (let x = 0; x < PW; x++) {
+      const i = y * PW + x, m = mat[i]; let c = D;
+      if (m === EARTH) {
+        const up = y ? mat[i - PW] : AIR, dn = y < PH - 1 ? mat[i + PW] : EARTH;
+        c = up === AIR || up === WATER ? 1 : dn === AIR ? D : tex[i] < 5 ? 1 : tex[i] > 249 || ((y * 5 + (x >> 3)) % 23 === 0 && tex[i] & 1) ? D : Mc;
+      }
+      else if (m === STEEL) { const a = x & 3, b = y & 3; c = a === 3 || b === 3 ? D : a === 0 || b === 0 ? 1 : Mc; }
+      else if (m === BRICK) c = 3;
+      else if (m === WATER) {
+        const top = !y || mat[i - PW] !== WATER;
+        c = top ? (((x + wt) % 6) < 3 ? 1 : Mc) : ((x + y * 3 + (wt >> 1)) % 11 === 0 ? 1 : (y & 1) ? Mc : D);
+      }
+      fb[y * 320 + x] = c;
+    }
+    drawExit(now); drawHatch();
+    for (const c of crs) {
+      const d = c.dir, X = c.x, Y = c.y;
+      switch (c.st) {
+        case "walk": spr(S.walk[(X >> 1) & 3], X, Y, d); break;
+        case "fall": spr(S.fall[(T >> 1) & 1], X, Y, d); break;
+        case "float": spr(S.walk[1], X, Y, d); spr(S.rotor[(T >> 1) & 1], X, Y - 9, d); break;
+        case "climb": spr(S.climb[(Y >> 1) & 1], X, Y, d); break;
+        case "block": spr(S.block[(T >> 3) & 1], X, Y, d); break;
+        case "build": spr(S.build[(c.t & 7) < 4 ? 0 : 1], X, Y, d); break;
+        case "shrug": spr(S.shrug[0], X, Y, d); break;
+        case "bash": spr(S.bash[(c.t >> 1) & 1], X, Y, d, 2); break;
+        case "mine": spr(S.mine[((c.t / 3) | 0) & 1], X, Y, d, 2); break;
+        case "dig": spr(S.dig[(c.t >> 1) & 1], X, Y, d); break;
+        case "splat": spr(S.splat[Math.min(2, c.t >> 2)], X, Y, d, 3); break;
+        case "drown": spr(S.walk[1], X, Y + (c.t >> 1), d, 2, Y); break;
+        case "exit": spr(S.fall[(c.t >> 1) & 1].slice(0, Math.max(1, 9 - c.t)), X, Y - c.t, d); break;
+      }
+      if (c.bomb > 0 && alive(c)) tiny(Math.ceil(c.bomb / 17), X - 1, Y - (c.st === "float" ? 18 : 15));
+    }
+    for (const p of parts) pset(p.x | 0, p.y | 0, p.c ? 3 : 1);
+  }
+  const ICONS = {
+    CLIMB: ["..o...ww", ".ooo..ww", "..w.w.ww", "..www.ww", "..w...ww", ".w.w..ww", ".w..w.ww", "......ww"],
+    FLOAT: ["wwwwwww.", "...w....", "...o....", "..ooo...", "...w....", "..www...", "...w....", "..w.w..."],
+    BOMB:  ["......o.", ".....w.o", "...ddw..", "..dddd..", ".dddwdd.", ".ddddwd.", ".dddddd.", "..dddd.."],
+    BLOCK: ["...o....", "..ooo...", "...w....", "wwwwwww.", "..www...", "...w....", "..w.w...", ".w...w.."],
+    BUILD: ["........", "......oo", "......dd", "....oooo", "....dddd", "..oooooo", "..dddddd", "oooooooo"],
+    BASH:  ["..o...dd", ".ooo..dd", "..w...dd", "..wwww.d", "..w...dd", ".w.w..dd", "w...w.dd", "......dd"],
+    MINE:  [".wwww...", "w...ow..", "....o.w.", "...o....", "..o.....", ".o......", "o.......", "........"],
+    DIG:   ["...oo...", "...o....", "...o....", "...o....", "..www...", "..www...", "..www...", "...w...."],
+    MINUS: ["........", "........", "........", ".wwwwww.", ".wwwwww.", "........", "........", "........"],
+    PLUS:  ["...ww...", "...ww...", "...ww...", "wwwwwwww", "wwwwwwww", "...ww...", "...ww...", "...ww..."],
+    PAUSE: ["........", ".ww..ww.", ".ww..ww.", ".ww..ww.", ".ww..ww.", ".ww..ww.", ".ww..ww.", "........"],
+    NUKE:  ["..oooo..", ".oooooo.", "oooooooo", ".oooooo.", "...oo...", "...oo...", "..oooo..", ".oooooo."],
+    FAST:  ["........", "w...w...", "ww..ww..", "www.www.", "www.www.", "ww..ww..", "w...w...", "........"]
+  };
+  const BTN = ["MINUS", "PLUS"].concat(SK, ["PAUSE", "NUKE", "FAST"]);
+  const BTN_TIP = ["RATE -", "RATE +"].concat(SK, ["PAUSE", "NUKE", "FAST"]);
+  const btnAt = (gx, gy) => gy >= 171 && gy < 199 && gx >= 4 && gx < 316 ? Math.floor((gx - 4) / 24) : -1;
+  function drawPanel() {
+    prect(0, 160, 320, 40, D);
+    const b = btnAt(cur.x, cur.y);
+    const left = b >= 0 ? BTN_TIP[b] : hover ? (hover.climber && hover.floater ? "ATHLETE" : DOER[hover.st]) + (hoverN > 1 ? " " + hoverN : "") : "";
+    const outN = crs.filter(alive).length, inPct = Math.floor(saved * 100 / L.n);
+    const tl = Math.max(0, Math.ceil((limit() - T) * TICK / 1000));
+    ptext(left.padEnd(13) + ("OUT " + p2(outN)).padEnd(8) + ("IN " + inPct + "%").padEnd(9) + "TIME " + Math.floor(tl / 60) + "-" + p2(tl % 60), 0, 162, 1);
+    for (let i = 0; i < 13; i++) {
+      const x = 4 + i * 24, y = 171, on = (i >= 2 && i < 10 && sel === i - 2) || (i === 10 && paused) || (i === 12 && fast) || (i === 11 && nukeAsk > T);
+      prect(x, y, 23, 28, Mc); prect(x, y, 23, 1, 1); prect(x, y, 1, 28, 1); prect(x, y + 27, 23, 1, D); prect(x + 22, y, 1, 28, D);
+      if (on) { prect(x + 1, y + 1, 21, 1, 3); prect(x + 1, y + 26, 21, 1, 3); prect(x + 1, y + 1, 1, 26, 3); prect(x + 21, y + 1, 1, 26, 3); }
+      const n = i === 0 ? L.rate : i === 1 ? rate : i < 10 ? sk[i - 2] : -1;
+      if (n > 0) ptext(p2(n), x + 4, y + 2, 1);
+      ICONS[BTN[i]].forEach((r, j) => { for (let k = 0; k < 8; k++) if (r[k] !== ".") prect(x + 4 + k * 2, y + 11 + j * 2, 2, 2, i >= 2 && i < 10 && !sk[i - 2] ? D : colOf(r[k])); });
+    }
+  }
+  function box(lines) {
+    const h = lines.length * 10 + 10, y = (PH - h) >> 1;
+    prect(32, y, 256, h, D); prect(32, y, 256, 1, 3); prect(32, y + h - 1, 256, 1, 3); prect(32, y, 1, h, 3); prect(287, y, 1, h, 3);
+    lines.forEach(([s, c], i) => ctext(s, y + 6 + i * 10, c === undefined ? 1 : c));
+  }
+  function drawCursor() {
+    if (!hasMouse || cur.x < 0) return;
+    const { x, y } = cur;
+    if (hover && st === "play") {
+      const bx = hover.x - 5, by = hover.y - 11;
+      for (const [dx, dy] of [[0, 0], [10, 0], [0, 12], [10, 12]]) { prect(bx + dx, by + dy, 1, 1, 3); }
+      prect(bx, by, 3, 1, 3); prect(bx, by, 1, 3, 3); prect(bx + 8, by, 3, 1, 3); prect(bx + 10, by, 1, 3, 3);
+      prect(bx, by + 12, 3, 1, 3); prect(bx, by + 10, 1, 3, 3); prect(bx + 8, by + 12, 3, 1, 3); prect(bx + 10, by + 10, 1, 3, 3);
+    }
+    prect(x - 5, y, 4, 1, 1); prect(x + 2, y, 4, 1, 1); prect(x, y - 5, 1, 4, 1); prect(x, y + 2, 1, 4, 1); pset(x, y, 3);
+  }
+  function drawTitle(now) {
+    fb.fill(D);
+    ctext("BITLINGS", 12, Mc, 4, 3); ptext("BITLINGS", 30, 10, 3, 4, 3);
+    ctext("GUIDE THE LITTLE BITS HOME", 40, 1);
+    for (let x = 0; x < 320; x++) for (let y = 60; y < 64; y++) fb[y * 320 + x] = y === 60 ? 1 : tex[y * PW + x] < 30 ? 1 : Mc;
+    for (let k = 0; k < 6; k++) { const x = ((now / 50 | 0) + k * 60) % 380 - 30; spr(S.walk[(x >> 1) & 3], x, 59, 1); }
+    LV.forEach((l, i) => {
+      const y = 70 + i * 10, open = i < maxLv, c = !open ? DIM : i === lv ? 3 : 1;
+      ptext((i === lv ? ">" : " ") + (i + 1) + "  " + l.name.toUpperCase().padEnd(19) + (open ? best[i] !== undefined ? "BEST " + String(best[i]).padStart(3) + "%" : "NEW" : "LOCKED"), 24, y, c);
+    });
+    if ((now / 500 | 0) & 1) ctext("CLICK A LEVEL OR PRESS FIRE", 156, 3);
+    ctext("1-8 SKILLS  P PAUSE  F FAST  N NUKE", 172, 1);
+    ctext("ESC: BACK TO THE WORKBENCH", 184, DIM);
+  }
+  function render(now) {
+    const r0 = lum(RGB[0]), r2 = lum(RGB[2]);
+    D = r0 < r2 ? 0 : 2; Mc = D ^ 2; DIM = Math.abs(r0 - r2) > 45 ? Mc : 1;   // a dim colour only where it still reads
+    if (st === "play" && !paused) {
+      acc += Math.min(250, now - last);
+      const step = fast ? FASTTICK : TICK;
+      while (acc >= step && st === "play") { acc -= step; tick(); }
+    }
+    last = now;
+    if (rateHold && now >= rateNext) { rate = clamp(rate + rateHold, L.rate, 99); rateNext = now + 70; }
+    if (st === "title") drawTitle(now);
+    else {
+      const h = st === "play" ? under(cur.x, cur.y, sel) : { c:null, n:0 };
+      hover = cur.y < PH ? h.c : null; hoverN = h.n;
+      drawWorld(now); drawPanel();
+      if (st === "intro") box([["LEVEL " + (lv + 1), 3], [L.name.toUpperCase()], [""], [L.n + " BITLINGS, SAVE " + L.need],
+        ["RELEASE RATE " + L.rate + ", " + L.time + " MINUTES"], [""], [L.hint, 3], [""], ["CLICK TO START"]]);
+      if (st === "result") {
+        const r = result, last8 = lv === LV.length - 1;
+        box([[timeUp ? "TIME IS UP" : "ALL BITLINGS ACCOUNTED FOR", 3], [""], ["YOU RESCUED " + String(r.pct).padStart(3) + "%"], ["YOU NEEDED  " + String(r.needPct).padStart(3) + "%"], [""],
+          [r.pct === 100 ? "EVERY SINGLE BIT. SUPERB!" : r.ok ? "WELL DONE." : r.pct ? "NOT QUITE. TRY AGAIN." : "BIT ROT. TOTAL LOSS.", r.ok ? 3 : 1], [""],
+          [r.ok ? (last8 ? "ALL EIGHT LEVELS DONE!" : "CLICK FOR LEVEL " + (lv + 2)) : "CLICK TO RETRY"], ["ESC FOR THE MENU", DIM]]);
+      }
+      if (paused && st === "play") ctext(" PAUSED ", 4, 3);
+    }
+    drawCursor();
+    if (!SCR) { SCR = document.createElement("canvas"); SCR.width = 320; SCR.height = 200; sg = SCR.getContext("2d"); img = sg.createImageData(320, 200); u32 = new Uint32Array(img.data.buffer); }
+    const lut = RGB.map(([r, g, b]) => (255 << 24 | b << 16 | g << 8 | r) >>> 0);
+    for (let i = 0; i < 64000; i++) u32[i] = lut[fb[i]];
+    sg.putImageData(img, 0, 0);
+    return SCR;
+  }
+
+  /* -- input -- */
+  function play(i) { load(i); st = "intro"; }
+  function press() {                               // fire: a click outside the panel, or Enter/Space
+    ac();
+    if (st === "title") play(lv);
+    else if (st === "intro") { st = "play"; last = performance.now(); acc = 0; }
+    else if (st === "result") { if (result.ok && lv < LV.length - 1) play(lv + 1); else if (result.ok) { st = "title"; } else play(lv); }
+  }
+  function button(i) {
+    if (i === 0 || i === 1) { rateHold = i ? 1 : -1; rate = clamp(rate + rateHold, L.rate, 99); rateNext = performance.now() + 300; sfx("sel"); return; }
+    if (i < 10) { sel = i - 2; sfx("sel"); return; }
+    if (i === 10) paused = !paused;
+    if (i === 11) { if (nukeAsk > T && !nuked) nuke(); else nukeAsk = T + 25; }
+    if (i === 12) fast = !fast;
+    sfx("sel");
+  }
+  let view = { ox:0, oy:0, w:640, h:200 };
+  const toG = p => ({ x:Math.floor((p.x - view.ox) * 320 / view.w), y:Math.floor((p.y - view.oy) * 200 / view.h) });
+  function pointer(type, p, e) {
+    cur = toG(p);
+    if (type === "up") { rateHold = 0; return; }
+    if (type !== "down" || (e && e.button > 0)) return;
+    if (st === "title") {
+      const i = Math.floor((cur.y - 69) / 10);
+      if (i >= 0 && i < LV.length && cur.x > 16 && cur.x < 304) { if (i < maxLv) { lv = i; play(i); } return; }
+      press(); return;
+    }
+    if (st !== "play") { press(); return; }
+    const b = btnAt(cur.x, cur.y);
+    if (b >= 0) { button(b); return; }
+    if (cur.y < PH && !give(under(cur.x, cur.y, sel).c, sel) && under(cur.x, cur.y, sel).c) sfx("tink");
+  }
+  function key(e, down) {
+    if (!down) { if (e.key === "-" || e.key === "+" || e.key === "F1" || e.key === "F2") rateHold = 0; return; }
+    const k = e.key;
+    if (k === "Escape") { if (st === "title") stop(); else st = "title"; e.preventDefault(); return; }
+    if (k === "Enter" || k === " " && st !== "play") { e.preventDefault(); press(); return; }
+    if (st === "title") {
+      if (k === "ArrowRight" || k === "ArrowDown") lv = Math.min(maxLv - 1, lv + 1);
+      if (k === "ArrowLeft" || k === "ArrowUp") lv = Math.max(0, lv - 1);
+      return;
+    }
+    if (st !== "play") return;
+    if (/^[1-8]$/.test(k)) { sel = +k - 1; sfx("sel"); }
+    else if (k === "p" || k === "P" || k === " ") { paused = !paused; e.preventDefault(); }
+    else if (k === "f" || k === "F") fast = !fast;
+    else if (k === "n" || k === "N") button(11);
+    else if (k === "r" || k === "R") play(lv);
+    else if ((k === "-" || k === "F1") && !e.repeat) button(0);
+    else if ((k === "+" || k === "=" || k === "F2") && !e.repeat) button(1);
+    else return;
+    e.preventDefault();
+  }
+  function draw(ctx2, LWv, LHv) {
+    const im = render(performance.now());
+    let f = Math.min(LWv / 640, LHv / 200); if (f >= 1) f = Math.floor(f);
+    const w = Math.round(640 * f), h = Math.round(200 * f), ox = (LWv - w) >> 1, oy = (LHv - h) >> 1;
+    view = { ox, oy, w, h };
+    ctx2.fillStyle = PAL[D]; ctx2.fillRect(0, 0, LWv, LHv);
+    ctx2.imageSmoothingEnabled = f < 1;
+    ctx2.drawImage(im, 0, 0, 320, 200, ox, oy, w, h);
+    ctx2.imageSmoothingEnabled = false;
+  }
+  function start() { st = "title"; lv = Math.min(lv, maxLv - 1); rateHold = 0; cur = { x:-99, y:-99 }; last = performance.now(); }
+  function stop() { rateHold = 0; if (mode === "bits") { mode = "wb"; dirty(); } }
+  return { start, stop, draw, key, pointer, LV,
+    _dbg: { load, fb, render, tick, give, get crs() { return crs; }, get saved() { return saved; }, get st() { return st; }, set st(v) { st = v; },
+            get T() { return T; }, get result() { return result; }, mat, solid } };
+})();
+function startBits() {
+  if (freeMem() < 98304) { noMem("Bitlings"); return; }
+  kbd.blur(); BT.start(); mode = "bits"; anim();
+}
 let touchSeen = false;
 function startCaves() {
   if (freeMem() < 98304) { noMem("Diamond Caves"); return; }
@@ -2299,7 +2890,7 @@ function startCaves() {
 }
 function openGames() {
   openWin({ id:"games", title:"Games", type:"drawer", gauge:false, mem:12288, x:90 + cascade(), y:60 + cascade(), w:200, h:64,
-    icons: [ mkIcon("Caves", "caves", () => startCaves()) ] });
+    icons: [ mkIcon("Caves", "caves", () => startCaves()), mkIcon("Bitlings", "bits", () => startBits()) ] });
 }
 
 /* ---------- PGP Key — the address never appears as text in the page source */
