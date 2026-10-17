@@ -5,5 +5,8 @@ Third-party parts are not covered by this license:
 - The Topaz a500 bitmap font embedded in index.html (and v1/) is by dMG/t!s^dS!
   (rewtnull/amigafonts), released under the GPL with font exception; Topaz (c) Amiga Inc.
 - kickstart13.png shows the Kickstart 1.3 artwork (c) Commodore-Amiga.
+- The Workbench 1.3 icons and window gadgets in index.html (disk, drawer, Trashcan, Shell,
+  Clock, Notepad, Preferences, DiskCopy, Palette and the RAM disk) are the original pixels
+  of Workbench 1.3 (c) Commodore-Amiga, read from the icon files of the Workbench1.3 disk.
 - Names such as Amiga, Workbench, X-Copy, VirusX and Boulder Dash belong to their
   respective owners and are used for reference only.

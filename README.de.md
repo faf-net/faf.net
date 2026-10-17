@@ -76,9 +76,11 @@ hoch wie breit). Keine Frameworks, kein Build-Schritt, keine Tracker.
   WebAudio erzeugt. X-Copy, SCA, Byte Bandit, VirusX und Boulder Dash sind Hommagen;
   deren Namen und Marken gehören den jeweiligen Rechteinhabern.
 - Beschreibung der Viren nach der Amiga Virus Encyclopedia (vht-dk.dk).
-- Die Icons für Disk, System-Disk, Schublade, Trashcan, Shell und Palette, die Fenster-Gadgets und
-  die Ziehleiste sind die Original-Pixel von Workbench 1.3, geprüft an einem echten 1.3-Bildschirm;
-  zuerst ausgemessen an [TAWS](https://www.taws.ch/WB.html) von Michael Rupp. Die Grafiken sind © Commodore-Amiga.
+- Die Workbench-Icons (Disk, Schublade, Trashcan, Shell, Clock, Notepad als About, Preferences,
+  DiskCopy als X-Copy) sind direkt aus den `.info`-Dateien der Diskette Workbench1.3 gelesen,
+  samt originaler Hervorhebung; Palette, RAM-Disk und Fenster-Gadgets sind an einem echten
+  1.3-Bildschirm geprüft, zuerst ausgemessen an [TAWS](https://www.taws.ch/WB.html) von Michael Rupp.
+  Alles davon ist © Commodore-Amiga und fällt nicht unter die MIT-Lizenz (siehe `NOTICE`).
 - Der Bluescreen ist eine Parodie mit eigenem Text; Windows ist eine Marke von Microsoft.
 - `kickstart13.png` zeigt die Kickstart-1.3-Grafik (© Commodore-Amiga) als Zitat.
 
