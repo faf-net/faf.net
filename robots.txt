@@ -1,0 +1,15 @@
+# faf.net — offen für alle Suchmaschinen und jede KI.
+# Gesperrt ist nur das Internet Archive (Wayback Machine).
+# Content Signals (https://contentsignals.org):
+#   search   Suchindizes
+#   ai-input Verwendung in KI-Antworten
+#   ai-train Modelltraining
+
+User-agent: ia_archiver
+User-agent: archive.org_bot
+User-agent: special_archiver
+Disallow: /
+
+User-agent: *
+Content-Signal: search=yes, ai-input=yes, ai-train=yes
+Allow: /
