@@ -21,12 +21,15 @@
   body.mouse #scr { cursor:none; }
   #kbd  { position:fixed; left:0; top:0; width:1px; height:1px; opacity:0; border:0; padding:0;
           resize:none; font-size:16px; }
+  #xc   { position:fixed; display:none; pointer-events:none; }      /* X-Copy draws here at full resolution */
+  body.mouse.xcopy #scr { cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Cpath d='M1 1 L1 17 L5 13 L8 20 L11 19 L8 12 L14 12 Z' fill='%232f6bff' stroke='%23001a66' stroke-width='1.5'/%3E%3C/svg%3E") 1 1, default; }
   .sr   { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
 </style>
 </head>
 <body>
 <canvas id="scr" role="img" aria-label="faf.net — a private node on the net, dressed up as an Amiga Workbench 1.3 desktop."></canvas>
 <div id="scan"></div>
+<canvas id="xc" aria-hidden="true"></canvas>
 <textarea id="kbd" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false" aria-label="Shell input"></textarea>
 <div class="sr">
   <h1>faf.net</h1>
@@ -1222,6 +1225,7 @@ function paint() {
   renderWB(); drawPointer();
 }
 function render() {
+  XR.show(mode === "xcopy");
   if (mode === "wb" && (screens.length > 1 || screens[0].y)) { renderScreens(); return; }
   paint();                                           // one screen: draw the logical screen, double its lines
   out.drawImage(lo, 0, 0, LW, LH, 0, 0, LW, 2 * LH);
@@ -1257,7 +1261,7 @@ function renderWB() {
 function drawPointer() {
   if (!hasMouse || ptr.x < 0) return;
   if (performance.now() < busyUntil) drawBusy(ptr.x, ptr.y);
-  else if (mode === "xcopy") { const s = SPR; SPR = { r:"#2f6bff", k:"#001a66", w:"#9fc4ff" }; drawSprite(POINTER, ptr.x, ptr.y); SPR = s; }  // X-Copy's blue arrow
+  else if (mode === "xcopy") return;                 // X-Copy's blue arrow is a CSS cursor over its own canvas
   else drawSprite(POINTER, ptr.x, ptr.y);
 }
 let raf = 0;
@@ -1339,7 +1343,7 @@ cv.addEventListener("pointerdown", e => {
   if (mode === "bbdark") { bbClick(); return; }
   if (mode === "boot") { skipBoot(); return; }
   if (mode === "guru") { if (e.button === 0) reboot(); return; }
-  if (mode === "xcopy") { xcClick(p, e.button); return; }
+  if (mode === "xcopy") { xcClick(e); return; }
   try { cv.setPointerCapture(e.pointerId); } catch (_) {}
 
   if (!(menu && menu.sticky)) {
@@ -1755,151 +1759,303 @@ function df1Copied() { df1.label = "faf.net"; df1.lw = 56; df1.img = "sysdisk"; 
 function df1Reset()  { df1.label = "DF1:NDOS"; df1.lw = 64; df1.img = "disk"; df1.act = () => openNDOS(); }
 
 /* ---------- X-Copy ------------------------------------------------------ */
-// Homage to X-Copy (© 1988 Cachet — F. Neuhaus & H.C. Berg), drawn on its own
-// 640×200 "screen" and scaled onto the Workbench canvas. Original colours, always.
-const XCV = document.createElement("canvas"); XCV.width = 640; XCV.height = 200;
-const X = XCV.getContext("2d"); X.imageSmoothingEnabled = false;
+// Homage to X-Copy (© 1988 Cachet — F. Neuhaus & H.C. Berg). Layout in the original 640×200 coordinates,
+// drawn in the manner of Third Bloc on its own full-resolution canvas (#xc) over the Workbench: the screen is
+// painted with light and shade, reduced to a few tones per material with an ordered 4×4 dither, and every point
+// becomes a small glyph with a visible joint; dark tones turn into grain, bright things bloom, Topaz sits on top.
 const XMODES = ["DOSCOPY+", "BAMCOPY+", "NIBBLE", "CHECK", "FORMAT", "ERASE"];
 const XC = { cells:new Uint8Array(160), busy:false, abort:false, mode:0, start:0, end:79, src:0, tgt:1,
-             status:"", T:{ ox:0, oy:0, f:1 } };
+             cur:-1, t0:0, dur:1, status:"" };
 const XG = { up:[279, 104], lo:[467, 104] };            // grid origins
 const XDRV = [14, 77, 139, 202];                        // drive x positions
-let XLOGO = null;
 
-function xf(x, y, w, h, c) { X.fillStyle = c; X.fillRect(x, y, w, h); }
-function xt(s, x, y, c, sx = 1, sy = 1, bold = true) {
-  const a = atlas(c);
-  for (let i = 0; i < s.length; i++) {
-    const g = gi(s[i]) * 8;
-    X.drawImage(a, g, 0, 8, 8, x + i * 8 * sx, y, 8 * sx, 8 * sy);
-    if (bold) X.drawImage(a, g, 0, 8, 8, x + i * 8 * sx + 1, y, 8 * sx, 8 * sy);
+const XR = (() => {
+  const CW = 320, CH = 200, BG = [13, 12, 11];           // glyph grid: one glyph per two hires pixels across, one per line
+  const STC = [null, "#ffe433", "#ff8a00", "#2fd12f", "#e02020", "#4a4a4a"];
+  const el = document.getElementById("xc"), octx = el.getContext("2d");
+  const mk = (w, h) => { const c = document.createElement("canvas"); c.width = w; c.height = h; return [c, c.getContext("2d")]; };
+  // S: the scene in 640×400 (lines doubled); L: only what emits light; C: S averaged down to the glyph grid
+  const [SC, S] = mk(640, 400), [LC, L] = mk(640, 400), [, C] = mk(CW, CH);
+  const [B1C, B1] = mk(160, 100), [B2C, B2] = mk(80, 50);
+  let s = 0, OUT = null, OUT32 = null, last = 0, shown = false;
+  const hash = (x, y, k) => {
+    let h = (x * 374761393 + y * 668265263 + k * 2246822519) | 0;
+    h = Math.imul(h ^ (h >>> 13), 1274126177);
+    return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+  };
+
+  /* drawing helpers (orig coords, y doubled by the transform) */
+  const lin = (g, x0, y0, x1, y1, st) => { const gr = g.createLinearGradient(x0, y0, x1, y1); st.forEach(([o, c]) => gr.addColorStop(o, c)); return gr; };
+  const rad = (g, x, y, r0, r1, st) => { const gr = g.createRadialGradient(x, y, r0, x, y, r1); st.forEach(([o, c]) => gr.addColorStop(o, c)); return gr; };
+  const box = (g, x, y, w, h, f) => { g.fillStyle = f; g.fillRect(x, y, w, h); };
+  const bevel = (g, x, y, w, h, hi = "#d8d8d8", lo = "#3c3c3c") => {
+    box(g, x, y, w, 1, hi); box(g, x, y, 2, h, hi); box(g, x, y + h - 1, w, 1, lo); box(g, x + w - 2, y, 2, h, lo);
+  };
+  const oval = (g, cx, cy, rx, ry, f) => { g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); g.fillStyle = f; g.fill(); };
+  const shade = (hex, k) => { const n = parseInt(hex.slice(1), 16); return "rgb(" + [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(v => Math.round(v * k)).join(",") + ")"; };
+  function rivet(cx, cy) {
+    oval(S, cx + 1, cy + .7, 4.4, 2.6, "rgba(0,0,0,.8)");
+    oval(S, cx, cy, 4, 2.3, rad(S, cx - 1.6, cy - 1, .2, 4.6, [[0, "#ffffff"], [.25, "#c8c8c8"], [.7, "#6a6a6a"], [1, "#2a2a2a"]]));
   }
-}
-function xrivet(cx, cy) {
-  xf(cx - 3, cy - 2, 6, 4, "#8a8a8a"); xf(cx - 4, cy - 1, 8, 2, "#8a8a8a");
-  xf(cx - 2, cy - 2, 2, 1, "#f0f0f0"); xf(cx - 3, cy - 1, 1, 1, "#d0d0d0"); xf(cx + 1, cy + 1, 3, 1, "#2a2a2a");
-}
-function xbevel(x, y, w, h) {
-  xf(x, y, w, 1, "#e0e0e0"); xf(x, y, 2, h, "#e0e0e0");
-  xf(x, y + h - 1, w, 1, "#505050"); xf(x + w - 2, y, 2, h, "#505050");
-}
-function xrivetPanel(x, y, w, h) {
-  xf(x, y, w, h, "#000000"); xbevel(x, y, w, h);
-  for (let cx = x + 8; cx <= x + w - 8; cx += 15) { xrivet(cx, y + 4); xrivet(cx, y + h - 5); }
-  for (let cy = y + 12; cy <= y + h - 12; cy += 8) { xrivet(x + 8, cy); xrivet(x + w - 9, cy); }
-}
-function xlamp(x, y) { xf(x, y, 6, 4, "#cc5500"); xf(x + 1, y, 4, 4, "#ff8800"); xf(x + 2, y + 1, 2, 1, "#ffee88"); }
-function xarrow(cx, y, up) {
-  const r = up ? [0, 1, 2] : [2, 1, 0];
-  r.forEach((k, i) => { xf(cx - 1 - k * 2, y + i, 2 + k * 4, 1, i === (up ? 0 : 2) ? "#99bbff" : "#2f6bff"); });
-}
-function xbulb(cx, cy, glass, hi, letter) {
-  for (let d = -4; d <= 4; d++) { const hw = Math.round(6 * Math.sqrt(1 - (d * d) / 25)); xf(cx - hw, cy + d, hw * 2, 1, glass); }
-  xf(cx - 3, cy - 3, 2, 1, hi); xf(cx - 4, cy - 2, 2, 1, hi);
-  xf(cx - 3, cy + 5, 6, 4, "#8c8c8c"); xf(cx - 3, cy + 6, 6, 1, "#444"); xf(cx - 3, cy + 8, 6, 1, "#444"); xf(cx - 1, cy + 9, 2, 1, "#666");
-  if (letter) xt(letter, cx - 4, cy - 4, "#3a1a00", 1, 1, false);
-}
-function xdrive(x, y, n) {
-  xf(x, y + 1, 50, 25, "#2347d8"); xf(x, y + 1, 50, 1, "#5f83ff"); xf(x, y + 25, 50, 1, "#0d1f7a"); xf(x + 49, y + 1, 1, 25, "#0d1f7a");
-  xf(x + 4, y, 42, 2, "#3fcf3f");
-  xf(x + 4, y + 2, 42, 16, "#d8d8d8"); xf(x + 4, y + 17, 42, 1, "#9a9a9a");
-  xt("DRIVE", x + 5, y + 2, "#5a5a6a", 1, 1, false); xt(String(n), x + 21, y + 10, "#5a5a6a", 1, 1, false);
-  xf(x + 12, y + 19, 26, 6, "#e8e8e8"); xf(x + 12, y + 24, 26, 1, "#7a7a7a");
-  for (let i = 0; i < 6; i++) xf(x + 22 + i * 2, y + 24 - i, 2, 1, "#9a9a9a");
-  xf(x + 15, y + 20, 3, 4, "#2347d8"); xf(x + 46, y + 22, 3, 3, "#000");
-}
-function xlogo() {
-  if (XLOGO) return XLOGO;
-  const sx = 7, sy = 4, w = 6 * 8 * sx, h = 8 * sy, mk = () => { const c = document.createElement("canvas"); c.width = w + 4; c.height = h + 4; const g = c.getContext("2d"); g.imageSmoothingEnabled = false; return [c, g]; };
-  const a = atlas("#ffffff");
-  const [m, mg] = mk();
-  for (let i = 0; i < 6; i++) mg.drawImage(a, gi("X-COPY"[i]) * 8, 0, 8, 8, 2 + i * 8 * sx, 2, 8 * sx, 8 * sy);
-  const tint = (fillFn) => { const [c, g] = mk(); g.drawImage(m, 0, 0); g.globalCompositeOperation = "source-in"; fillFn(g); g.fillRect(0, 0, c.width, c.height); return c; };
-  const black = tint(g => { g.fillStyle = "#000"; });
-  const dark = tint(g => { g.fillStyle = "#3a3a3a"; });
-  const chrome = tint(g => { const gr = g.createLinearGradient(0, 2, 0, h + 2);
-    [[0, "#ffffff"], [.3, "#d4d4d4"], [.48, "#7a7a7a"], [.52, "#4a4a4a"], [.62, "#a8a8a8"], [1, "#efefef"]].forEach(([o, c]) => gr.addColorStop(o, c)); g.fillStyle = gr; });
-  const [o, og] = mk();
-  for (const [dx, dy] of [[-2, 0], [2, 0], [0, -1], [0, 1], [-2, -1], [2, 1]]) og.drawImage(black, dx, dy);
-  og.drawImage(dark, 2, 1); og.drawImage(chrome, 0, 0);
-  return (XLOGO = o);
-}
-function xgrid(x0, y0, title) {
-  xt(title, x0 + 80 - title.length * 4, 84, "#c8c8c8");
-  for (let c = 0; c < 10; c++) xt(String(c), x0 + c * 16 + 4, 95, "#d8d8d8", 1, 1, false);
-  for (let r = 0; r < 9; r++) xt(String(r), x0 - 11, y0 + r * 8, "#d8d8d8", 1, 1, false);
-  for (let c = 0; c <= 10; c++) xf(x0 + c * 16, y0, 1, 72, c ? "#bdbdbd" : "#ffffff");
-  for (let r = 0; r <= 9; r++) xf(x0, y0 + r * 8, 161, 1, r ? "#bdbdbd" : "#ffffff");
-}
-function xcell(side, t, st) {
-  const [x0, y0] = side ? XG.lo : XG.up, x = x0 + (t % 10) * 16 + 2, y = y0 + Math.floor(t / 10) * 8 + 2;
-  const C = [null, "#ffee33", "#ff8a00", "#2fd12f", "#e02020", "#5a5a5a"][st];
-  if (!C) return;
-  xf(x, y, 13, 5, C);
-  if (st === 4) xt("2", x + 3, y - 2, "#ffffff", 1, 1, false);
-}
+  function plate(x, y, w, h) {                           // brushed steel with rivets round the edge
+    box(S, x, y, w, h, lin(S, x, y, x + w * .3, y + h, [[0, "#3a3a3a"], [.5, "#1e1e1e"], [1, "#0e0e0e"]]));
+    for (let i = 0; i < h; i++) { S.globalAlpha = .06 + .1 * hash(i, x, 3); box(S, x, y + i, w, .5, "#b0b0b0"); }
+    S.globalAlpha = 1;
+    bevel(S, x, y, w, h);
+    for (let cx = x + 8; cx <= x + w - 8; cx += 15) { rivet(cx, y + 4.5); rivet(cx, y + h - 5); }
+    for (let cy = y + 13; cy <= y + h - 12; cy += 8) { rivet(x + 8, cy); rivet(x + w - 9, cy); }
+  }
+  function lamp(x, y, on) {                              // amber lens in a dark bezel
+    box(S, x - 1, y - 1, 8, 6, "#1a0c00");
+    box(S, x, y, 6, 4, lin(S, x, y, x, y + 4, [[0, on ? "#fff0b0" : "#cc5500"], [.5, on ? "#ffaa22" : "#7a3300"], [1, on ? "#cc5500" : "#3a1a00"]]));
+    if (on) { L.fillStyle = "#ff8a10"; L.fillRect(x - 2, y - 2, 10, 8); }
+  }
+  function arrow(cx, y, up) {
+    S.beginPath();
+    if (up) { S.moveTo(cx, y); S.lineTo(cx + 4.5, y + 3); S.lineTo(cx - 4.5, y + 3); }
+    else { S.moveTo(cx - 4.5, y); S.lineTo(cx + 4.5, y); S.lineTo(cx, y + 3); }
+    S.closePath(); S.fillStyle = lin(S, 0, y, 0, y + 3, up ? [[0, "#bcd2ff"], [1, "#2f6bff"]] : [[0, "#2f6bff"], [1, "#1a36b0"]]); S.fill();
+  }
+  function bulb(cx, cy, glass, hi, lit, k = 1) {
+    oval(S, cx, cy, 6.6, 5.2, rad(S, cx - 2.5, cy - 2.2, .3, 8, [[0, hi], [.3, glass], [.85, shade(glass, .45)], [1, shade(glass, .2)]]));
+    oval(S, cx - 2.6, cy - 2.4, 1.6, 1, "rgba(255,255,255,.9)");
+    for (let i = 0; i < 4; i++) box(S, cx - 3.5, cy + 5 + i, 7, 1, lin(S, cx - 3.5, 0, cx + 3.5, 0, i & 1 ? [[0, "#3a3a3a"], [1, "#151515"]] : [[0, "#dedede"], [.4, "#9a9a9a"], [1, "#3a3a3a"]]));
+    box(S, cx - 1, cy + 9, 2, 1, "#555555");
+    if (lit) { L.globalAlpha = k; L.fillStyle = rad(L, cx, cy, 0, 15, [[0, glass], [1, "rgba(0,0,0,0)"]]); L.fillRect(cx - 16, cy - 16, 32, 32); L.globalAlpha = 1; }
+  }
+  function drive(x, y, led) {
+    box(S, x + 2, y + 3, 50, 25, "rgba(0,0,0,.7)");                                               // cast shadow
+    box(S, x, y + 1, 50, 25, lin(S, x, y + 1, x, y + 26, [[0, "#6f93ff"], [.12, "#2f6bff"], [.6, "#2347d8"], [1, "#0d1f7a"]]));
+    box(S, x + 48, y + 1, 2, 25, "#0d1f7a");
+    box(S, x + 4, y, 42, 2, lin(S, 0, y, 0, y + 2, [[0, "#c8ffb0"], [1, "#2a8a2a"]]));
+    box(S, x + 4, y + 2, 42, 16, lin(S, x, y + 2, x + 20, y + 18, [[0, "#ffffff"], [.5, "#d4d4d4"], [1, "#9a9a9a"]]));
+    box(S, x + 4, y + 17, 42, 1, "#555555");
+    box(S, x + 12, y + 19, 26, 6, lin(S, 0, y + 19, 0, y + 25, [[0, "#151515"], [.3, "#dedede"], [1, "#777777"]]));
+    box(S, x + 15, y + 20, 3, 4, "#2347d8");
+    box(S, x + 46, y + 22, 3, 3, led ? "#c8ffb0" : "#0c300c");
+    if (led) { L.fillStyle = "#4dff3a"; L.fillRect(x + 44, y + 21, 7, 5); }
+  }
 
-function renderXCopyScreen() {
-  xf(0, 0, 640, 200, "#000000");
-  // header: rivet panels, chrome logo, plaque
-  xrivetPanel(6, 1, 131, 42);
-  xt("© 1988 by", 20, 13, "#d8d8d8"); xt("CACHET", 36, 25, "#d8d8d8", 1, 1);
-  xf(138, 1, 364, 42, "#000000"); xbevel(138, 1, 364, 42);
-  for (let y = 4; y < 42; y += 3) for (let x = 141 + (y % 2) * 2; x < 500; x += 4) xf(x, y, 1, 1, "#4a4a4a");
-  X.drawImage(xlogo(), 150, 2);
-  for (const [x, y] of [[176, 7], [240, 21], [300, 9], [355, 28], [410, 8], [468, 22]]) xrivet(x, y);
-  xf(208, 34, 212, 11, "#3a2410"); xbevel(208, 34, 212, 11);
-  const pl = "FAF.NET EDITION"; xt(pl, 314 - pl.length * 4, 36, "#ffaa22");
-  xrivetPanel(504, 1, 131, 42);
-  xt("F.NEUHAUS", 534, 13, "#d8d8d8"); xt("& H.C.BERG", 530, 25, "#d8d8d8");
-  // parameter panel
-  xbevel(6, 45, 629, 35);
-  xf(9, 47, 37, 31, "#000"); xbevel(9, 47, 37, 31);
-  const go = !XC.busy;
-  xlamp(13, 49); xlamp(13, 72);
-  ["S", "T", "O", "P"].forEach((ch, i) => xt(ch, 29, 47 + i * 8, go ? "#7a2a00" : "#ff5a1a"));
-  ["G", "O"].forEach((ch, i) => xt(ch, 13, 55 + i * 8, go ? "#33dd33" : "#145514"));
-  [[57, "MODE", 69], [125, "DEF", 136], [178, "LIST", 191], [0, "START", 238], [0, "END", 316], [366, "NAME", 377], [431, "SIDE", 442], [492, "SYNC", 505], [0, "LENGTH", 559]]
-    .forEach(([lx, s, x]) => { if (lx) xlamp(lx, 51); xt(s, x, 49, "#c8c8c8"); });
-  xf(52, 58, 580, 1, "#2f6bff");
-  const vals = [[XMODES[XC.mode], 53, false], [p2(XC.start), 229, true], ["0", 278, true], [p2(XC.end), 315, true], ["1", 364, true], ["BOTH", 390, false], ["4489", 485, true], ["1860", 562, true]];
-  vals.forEach(([s, x, arrows]) => {
-    xt(s, x, 65, "#33cc33", 2, 1);
-    if (arrows) for (let i = 0; i < s.length; i++) { xarrow(x + i * 16 + 8, 60, true); xarrow(x + i * 16 + 8, 74, false); }
+  /* chrome logo */
+  let LOGO = null;
+  function logoBase() {
+    if (LOGO) return LOGO;
+    const sx = 7, sy = 4, w = 6 * 8 * sx + 8, h = 8 * sy + 6;
+    const a = atlas("#ffffff"), [m, mg] = mk(w, h);
+    mg.imageSmoothingEnabled = false;
+    for (let i = 0; i < 6; i++) for (const d of [0, 1]) mg.drawImage(a, gi("X-COPY"[i]) * 8, 0, 8, 8, 3 + i * 8 * sx + d * 2, 2, 8 * sx, 8 * sy);
+    const tint = fill => { const [c, g] = mk(w, h); g.drawImage(m, 0, 0); g.globalCompositeOperation = "source-in"; g.fillStyle = fill(g); g.fillRect(0, 0, w, h); return c; };
+    const chrome = tint(g => lin(g, 0, 2, 0, 8 * sy + 2, [[0, "#ffffff"], [.28, "#dedede"], [.46, "#9a9a9a"], [.5, "#262626"], [.56, "#555555"], [.75, "#bdbdbd"], [1, "#ffffff"]]));
+    return (LOGO = { w, h, m, chrome, edge:tint(() => "#ffffff"), black:tint(() => "#000000"), dark:tint(() => "#262626") });
+  }
+  function logo(x, y, t) {
+    const o = logoBase();
+    for (const [dx, dy] of [[-2, 0], [2, 0], [0, -1], [0, 1], [-2, -1], [2, 1]]) S.drawImage(o.black, x + dx, y + dy);
+    S.drawImage(o.dark, x + 4, y + 2);
+    S.globalAlpha = .6; S.drawImage(o.edge, x - 1, y - .5); S.globalAlpha = 1;                // lit edge upper left
+    S.drawImage(o.chrome, x, y);
+    const p = reduce ? -1 : (t % 6) / 1.3;                                                         // glint every six seconds
+    if (p >= 0 && p <= 1) {
+      const [gc, g] = mk(o.w, o.h), gx = -40 + p * (o.w + 80);
+      g.drawImage(o.m, 0, 0); g.globalCompositeOperation = "source-in";
+      g.setTransform(1, 0, -.6, 1, 0, 0);
+      g.fillStyle = lin(g, gx - 14, 0, gx + 14, 0, [[0, "rgba(255,255,255,0)"], [.5, "rgba(255,255,255,1)"], [1, "rgba(255,255,255,0)"]]);
+      g.fillRect(-60, 0, o.w + 120, o.h);
+      S.drawImage(gc, x, y); L.globalAlpha = .7; L.drawImage(gc, x, y); L.globalAlpha = 1;
+    }
+  }
+
+  /* the screen */
+  const TXT = [];                                         // crisp text over the glyphs: [s, x, y, col, sx, bold, glow]
+  const txt = (str, x, y, col, o = {}) => TXT.push([str, x, y, col, o.sx || 1, !!o.bold, o.glow || 0]);
+  function scene(t) {
+    TXT.length = 0;
+    for (const g of [S, L]) { g.setTransform(1, 0, 0, 2, 0, 0); g.imageSmoothingEnabled = true; }
+    box(S, 0, 0, 640, 200, "#000000"); L.clearRect(0, 0, 640, 200);
+    const busy = XC.busy, cur = XC.cur, st = cur >= 0 ? XC.cells[cur] : 0, reading = busy && st === 1, writing = busy && st === 2;
+    const flick = reduce ? 1 : .8 + .2 * Math.sin(t * 21) * Math.sin(t * 8.7);
+    // header: riveted plates, the chrome logo on a perforated plate, the edition plaque
+    plate(6, 1, 131, 42); plate(504, 1, 131, 42);
+    box(S, 138, 1, 364, 42, lin(S, 0, 1, 0, 43, [[0, "#262626"], [1, "#000000"]]));
+    for (let y = 4; y < 42; y += 3) for (let x = 141 + (y % 2) * 2; x < 500; x += 4) { box(S, x, y, 1.6, 1, "#000"); box(S, x + .6, y + .4, 1, .6, "#555555"); }
+    bevel(S, 138, 1, 364, 42);
+    for (const [x, y] of [[176, 7], [240, 21], [300, 9], [355, 28], [410, 8], [468, 22]]) rivet(x, y);
+    logo(146, 1, t);
+    box(S, 208, 34, 212, 11, lin(S, 0, 34, 0, 45, [[0, "#8a5a2a"], [.15, "#5a3818"], [1, "#2a1606"]]));
+    bevel(S, 208, 34, 212, 11, "#b07a40", "#2a1606");
+    txt("© 1988 by", 20, 13, "#d8d8d8"); txt("CACHET", 36, 25, "#e8e8e8");
+    txt("F.NEUHAUS", 534, 13, "#d8d8d8"); txt("& H.C.BERG", 530, 25, "#d8d8d8");
+    txt("FAF.NET EDITION", 254, 36, "#ffaa22", { glow:.5 });
+    // parameter panel
+    box(S, 6, 45, 629, 35, lin(S, 0, 45, 0, 80, [[0, "#262626"], [1, "#000000"]])); bevel(S, 6, 45, 629, 35);
+    box(S, 9, 47, 37, 31, "#000000"); bevel(S, 9, 47, 37, 31, "#3a3a3a", "#bdbdbd");
+    lamp(13, 49, !busy); lamp(13, 72, busy);
+    ["S", "T", "O", "P"].forEach((ch, i) => txt(ch, 29, 47 + i * 8, busy ? "#ff5a1a" : "#5a1e00", { glow:busy ? 1 : 0 }));
+    ["G", "O"].forEach((ch, i) => txt(ch, 13, 55 + i * 8, busy ? "#124012" : "#3dff3d", { glow:busy ? 0 : .6 + .4 * Math.sin(t * 3) }));
+    [[57, "MODE", 69], [125, "DEF", 136], [178, "LIST", 191], [0, "START", 238], [0, "END", 316], [366, "NAME", 377], [431, "SIDE", 442], [492, "SYNC", 505], [0, "LENGTH", 559]]
+      .forEach(([lx, str, x]) => { if (lx) lamp(lx, 51, false); txt(str, x, 49, "#c8c8c8"); });
+    box(S, 52, 58, 580, 1, "#2f6bff"); L.fillStyle = "rgba(47,107,255,.35)"; L.fillRect(52, 57.5, 580, 2);
+    [[XMODES[XC.mode], 53, false], [p2(XC.start), 229, true], ["0", 278, true], [p2(XC.end), 315, true], ["1", 364, true], ["BOTH", 390, false], ["4489", 485, true], ["1860", 562, true]]
+      .forEach(([str, x, ar]) => {
+        txt(str, x, 65, "#44e044", { sx:2, bold:true, glow:.55 });
+        if (ar) for (let i = 0; i < str.length; i++) { arrow(x + i * 16 + 8, 60, true); arrow(x + i * 16 + 8, 74, false); }
+      });
+    // drives
+    txt("SOURCE DRIVE", 80, 84, "#c8c8c8");
+    box(S, 6, 93, 628, 1, "#2f6bff");
+    bulb(XDRV[XC.src] + 25, 108, reading ? "#fff0b0" : "#9a9a9a", "#ffffff", reading, flick);
+    XDRV.forEach((x, i) => {
+      drive(x, 121, (reading && i === XC.src) || (writing && i === XC.tgt));
+      txt("DRIVE", x + 5, 123, "#3a3a4a"); txt(String(i), x + 21, 131, "#3a3a4a");
+    });
+    bulb(XDRV[XC.tgt] + 25, 152, writing ? "#ffaa22" : "#ff8800", "#fff0b0", true, writing ? flick : .45);
+    txt("V", XDRV[XC.tgt] + 21, 148, "#3a1a00");
+    box(S, 6, 166, 255, 1, "#2f6bff");
+    txt("TARGET DRIVES", 80, 170, "#c8c8c8");
+    // track grids
+    for (const [side, [x0, y0], title] of [[0, XG.up, "UPPER SIDE"], [1, XG.lo, "LOWER SIDE"]]) {
+      txt(title, x0 + 80 - title.length * 4, 84, "#c8c8c8");
+      for (let c = 0; c < 10; c++) txt(String(c), x0 + c * 16 + 4, 95, "#bdbdbd");
+      for (let r = 0; r < 8; r++) txt(String(r), x0 - 11, y0 + r * 8, "#bdbdbd");
+      for (let tr = 0; tr < 80; tr++) {
+        const i = side * 80 + tr, sti = XC.cells[i], x = x0 + (tr % 10) * 16 + 2, y = y0 + Math.floor(tr / 10) * 8 + 2;
+        box(S, x - 1, y - 1, 15, 7, lin(S, 0, y - 1, 0, y + 6, [[0, "#000000"], [1, "#262626"]]));   // recessed slot
+        if (i === cur && STC[sti]) {                     // the track under the head fills left to right and glows
+          const w = 13 * clamp((performance.now() - XC.t0) / XC.dur, 0, 1);
+          box(S, x, y, w, 5, lin(S, 0, y, 0, y + 5, [[0, "#ffffff"], [.3, STC[sti]], [1, shade(STC[sti], .55)]]));
+          L.fillStyle = STC[sti]; L.fillRect(x - 3, y - 2, w + 6, 9);
+        } else if (STC[sti]) {
+          box(S, x, y, 13, 5, lin(S, 0, y, 0, y + 5, [[0, "#ffffff"], [.25, STC[sti]], [1, shade(STC[sti], .5)]]));
+          if (sti === 4) { txt("2", x + 3, y - 2, "#ffffff"); L.fillStyle = "rgba(224,32,32,.6)"; L.fillRect(x - 2, y - 1, 17, 7); }
+        }
+      }
+      for (let c = 0; c <= 10; c++) box(S, x0 + c * 16, y0, 1, 65, c ? "#9a9a9a" : "#ffffff");
+      for (let r = 0; r <= 8; r++) box(S, x0, y0 + r * 8, 161, 1, r ? "#9a9a9a" : "#ffffff");
+    }
+    txt("RELEASE V1.2 / 01/10/88", 446, 178, "#2a8a2a");
+    // status bar
+    bevel(S, 6, 187, 629, 13); box(S, 8, 188, 625, 11, "#000");
+    txt(XC.status + (!busy && Math.floor(t * 1.9) % 2 ? "_" : ""), 14, 190, "#ffffff", { glow:.25 });
+  }
+
+  /* glyph rendering: a few tones per material, between the two nearest an ordered 4×4 dither */
+  const PAL = ["000000", "151515", "262626", "3a3a3a", "555555", "777777", "9a9a9a", "bdbdbd", "dedede", "ffffff",
+               "0d1f7a", "1a36b0", "2347d8", "2f6bff", "6f93ff", "bcd2ff",
+               "0c300c", "145514", "2a8a2a", "2fd12f", "6aff6a", "c8ffb0",
+               "3a1a00", "7a3300", "cc5500", "ff8800", "ffaa22", "ffd27a", "fff0b0", "ffe433",
+               "3a0808", "8a1414", "e02020", "ff7a6a", "2a1606", "5a3818", "8a5a2a", "b07a40"]
+    .map(h => [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4), 16)]);
+  const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+  const pack = (r, g, b) => (255 << 24) | (b << 16) | (g << 8) | r;
+  const BG32 = pack(...BG);
+  const TONE = PAL.map(([r, g, b]) => {                 // solid glyph, its joint, and for dark tones a lifted dot (grain)
+    const v = Math.max(r, g, b), k = v ? Math.min(2.2, 200 / v) : 1;
+    return { v, solid:pack(r, g, b), joint:pack(...[r, g, b].map((c, i) => Math.round(c * .35 + BG[i] * .65))),
+             dot:pack(...[r, g, b].map(c => Math.min(255, Math.round(c * k)))) };
   });
-  // drives
-  xt("SOURCE DRIVE", 80, 84, "#c8c8c8");
-  xf(6, 93, 628, 1, "#2f6bff");
-  xbulb(XDRV[XC.src] + 25, 109, "#b8b8b8", "#ffffff");
-  XDRV.forEach((x, i) => xdrive(x, 121, i));
-  xbulb(XDRV[XC.tgt] + 25, 154, "#ff9a00", "#ffe066", "V");
-  xf(6, 166, 255, 1, "#2f6bff");
-  xt("TARGET DRIVES", 80, 170, "#c8c8c8");
-  // grids
-  xgrid(XG.up[0], XG.up[1], "UPPER SIDE"); xgrid(XG.lo[0], XG.lo[1], "LOWER SIDE");
-  for (let s = 0; s < 2; s++) for (let t = 0; t < 80; t++) xcell(s, t, XC.cells[s * 80 + t]);
-  xt("RELEASE V1.2 / 01/10/88", 446, 178, "#2a8a2a", 1, 1, false);
-  // status bar
-  xbevel(6, 187, 629, 13); xf(8, 188, 625, 11, "#000");
-  xt(XC.status, 14, 190, "#ffffff", 1, 1, false);
-}
+  const QC = new Map();
+  function quant(r, g, b) {                               // → [tone a, tone b, share of b × 16]
+    const key = (r >> 2 << 12) | (g >> 2 << 6) | (b >> 2);
+    let q = QC.get(key);
+    if (q) return q;
+    let a = 0, bb = 0, da = Infinity, db = Infinity;
+    for (let i = 0; i < PAL.length; i++) {
+      const p = PAL[i], d = (p[0] - r) ** 2 * .3 + (p[1] - g) ** 2 * .59 + (p[2] - b) ** 2 * .11;
+      if (d < da) { db = da; bb = a; da = d; a = i; } else if (d < db) { db = d; bb = i; }
+    }
+    const A = PAL[a], B = PAL[bb], l2 = (B[0] - A[0]) ** 2 + (B[1] - A[1]) ** 2 + (B[2] - A[2]) ** 2 || 1;
+    const t = ((r - A[0]) * (B[0] - A[0]) + (g - A[1]) * (B[1] - A[1]) + (b - A[2]) * (B[2] - A[2])) / l2;
+    QC.set(key, q = [a, bb, clamp(t, 0, 1) * 16]);
+    return q;
+  }
+  function glyphs() {
+    C.drawImage(SC, 0, 0, CW, CH);
+    const src = C.getImageData(0, 0, CW, CH).data, W = CW * s, h1 = Math.ceil((s - 1) / 2), h2 = s - 1 - h1;
+    OUT32.fill(BG32);
+    for (let cy = 0; cy < CH; cy++) for (let cx = 0; cx < CW; cx++) {
+      const p = (cy * CW + cx) * 4, q = quant(src[p], src[p + 1], src[p + 2]);
+      const T = TONE[q[2] > BAYER[(cy & 3) * 4 + (cx & 3)] + .5 ? q[1] : q[0]];
+      if (!T.v) continue;
+      const x0 = cx * s, y0 = cy * s;
+      if (T.v < 80) {                                     // dark: two dots on a diagonal, alternating, like a dense ':'
+        const flip = (cx + cy) & 1;
+        for (let yy = 0; yy < h1; yy++) {
+          const r1 = (y0 + yy) * W + x0 + (flip ? h1 : 0), r2 = (y0 + h1 + yy) * W + x0 + (flip ? 0 : h1);
+          for (let xx = 0; xx < h2; xx++) { OUT32[r1 + xx] = T.dot; OUT32[r2 + xx] = T.dot; }
+        }
+        continue;
+      }
+      for (let yy = 0; yy < s - 1; yy++) { const row = (y0 + yy) * W + x0; for (let xx = 0; xx < s - 1; xx++) OUT32[row + xx] = T.solid; OUT32[row + s - 1] = T.joint; }
+      const row = (y0 + s - 1) * W + x0; for (let xx = 0; xx < s; xx++) OUT32[row + xx] = T.joint;
+    }
+    octx.putImageData(OUT, 0, 0);
+  }
+  function overlay() {                                    // Topaz, sharp, at the original hires size
+    octx.imageSmoothingEnabled = false;
+    const gw = s / 2 * 8, gh = s * 8;
+    for (const [str, x, y, col, sx, bold] of TXT) {
+      const a = atlas(col);
+      for (let i = 0; i < str.length; i++) {
+        const dx = (x + i * 8 * sx) * s / 2, dy = y * s, g = gi(str[i]) * 8;
+        octx.drawImage(a, g, 0, 8, 8, dx, dy, gw * sx, gh);
+        if (bold) octx.drawImage(a, g, 0, 8, 8, dx + s / 2, dy, gw * sx, gh);
+      }
+    }
+    for (const [str, x, y, col, sx, , gl] of TXT) if (gl) {            // glowing text goes into the light layer
+      L.globalAlpha = gl; const a = atlas(col);
+      for (let i = 0; i < str.length; i++) L.drawImage(a, gi(str[i]) * 8, 0, 8, 8, x + i * 8 * sx, y - .5, 8 * sx + 1, 9);
+      L.globalAlpha = 1;
+    }
+  }
+  function bloom() {
+    for (const [bc, b, r] of [[B1C, B1, 2], [B2C, B2, 3]]) {
+      b.clearRect(0, 0, bc.width, bc.height); b.filter = "blur(" + r + "px)"; b.drawImage(LC, 0, 0, bc.width, bc.height); b.filter = "none";
+    }
+    octx.save(); octx.globalCompositeOperation = "lighter"; octx.imageSmoothingEnabled = true;
+    octx.globalAlpha = .55; octx.drawImage(B1C, 0, 0, el.width, el.height);
+    octx.globalAlpha = .45; octx.drawImage(B2C, 0, 0, el.width, el.height);
+    octx.restore();
+  }
+  function fit() {                                        // glyph size in device pixels, canvas centred, never upscaled
+    const dpr = window.devicePixelRatio || 1, ns = clamp(Math.floor(Math.min(innerWidth * dpr / CW, innerHeight * dpr / CH)), 2, 7);
+    if (ns !== s) { s = ns; el.width = CW * s; el.height = CH * s; OUT = octx.createImageData(el.width, el.height); OUT32 = new Uint32Array(OUT.data.buffer); }
+    const f = Math.min(innerWidth / (el.width / dpr), innerHeight / (el.height / dpr), 1), w = el.width / dpr * f, h = el.height / dpr * f;
+    el.style.width = w + "px"; el.style.height = h + "px";
+    el.style.left = (innerWidth - w) / 2 + "px"; el.style.top = (innerHeight - h) / 2 + "px";
+  }
+  return {
+    show(on) {
+      if (on === shown) return;
+      shown = on; el.style.display = on ? "block" : "none"; document.body.classList.toggle("xcopy", on);
+      if (on) { fit(); last = 0; }
+    },
+    draw(now) {                                           // at most 30 frames a second; the canvas keeps the last one
+      if (now - last < 33) return;
+      last = now; fit();
+      scene(now / 1000); glyphs(); overlay(); bloom();
+    },
+    at(e) {                                               // client position → original 640×200 coordinates
+      const b = el.getBoundingClientRect();
+      return { x:(e.clientX - b.left) / b.width * 640, y:(e.clientY - b.top) / b.height * 200 };
+    }
+  };
+})();
+
 function renderXCopy() {
-  renderXCopyScreen();
   fill(0, 0, LW, LH, "#000000");
-  let f = Math.min(LW / 640, LH / 200); if (f >= 1) f = Math.floor(f);
-  const w = Math.round(640 * f), h = Math.round(200 * f), ox = (LW - w) >> 1, oy = (LH - h) >> 1;
-  XC.T = { ox, oy, f };
-  ctx.imageSmoothingEnabled = f < 1;
-  ctx.drawImage(XCV, 0, 0, 640, 200, ox, oy, w, h);
-  ctx.imageSmoothingEnabled = false;
+  XR.draw(performance.now());
 }
 function startXCopy() {
   if (freeMem() < 131072) { noMem("X-Copy"); return; }
-  mode = "xcopy"; XC.cells.fill(0); kbd.blur();
+  mode = "xcopy"; XC.cells.fill(0); XC.cur = -1; kbd.blur();
   XC.status = "X-COPY READY.   CLICK GO TO START  -  CLICK THE LOGO TO QUIT";
   anim();
 }
 function xcStop() { XC.abort = true; }
+async function xcPass(i, st, label, d) {                 // one track side under the head: it fills while this runs
+  XC.cells[i] = st; XC.cur = i; XC.t0 = performance.now(); XC.dur = d; XC.status = label;
+  snd("grind"); await sleep(d); XC.cur = -1;
+}
 async function xcRun() {
   if (XC.busy) return;
   const m = XMODES[XC.mode], reads = m !== "FORMAT" && m !== "ERASE", writes = m !== "CHECK";
@@ -1909,21 +2065,21 @@ async function xcRun() {
   XC.busy = true; XC.abort = false; XC.cells.fill(0);
   let errors = 0;
   const bad = reads && m !== "NIBBLE" && Math.random() < .6 ? XC.start + Math.floor(Math.random() * (XC.end - XC.start + 1)) : -1;
-  const d = reduce ? 0 : m === "BAMCOPY+" ? 22 : 38;
+  const d = reduce ? 4 : m === "BAMCOPY+" ? 45 : 70;
   for (let t = XC.start; t <= XC.end && !XC.abort; t++) {
     snd("step");
     for (let s = 0; s < 2 && !XC.abort; s++) {
       const i = s * 80 + t;
       if (m === "BAMCOPY+" && t > 40 && Math.random() < .5) { XC.cells[i] = 5; continue; }     // unused per BAM
       if (reads) {
-        XC.cells[i] = 1; XC.status = `READING TRACK ${p2(t)}  SIDE ${s}`; snd("grind"); await sleep(d);
+        await xcPass(i, 1, `READING TRACK ${p2(t)}  SIDE ${s}`, d);
         if (t === bad && s === 1) { XC.cells[i] = 4; errors++; XC.status = `TRACK ${p2(t)} SIDE ${s}: ERROR 2 - NO SYNC FOUND`; snd("err"); await sleep(reduce ? 0 : 700); continue; }
       }
-      if (writes) { XC.cells[i] = 2; XC.status = `${m === "FORMAT" ? "FORMATTING" : m === "ERASE" ? "ERASING" : "WRITING"} TRACK ${p2(t)}  SIDE ${s}`; snd("grind"); await sleep(d); }
+      if (writes) await xcPass(i, 2, `${m === "FORMAT" ? "FORMATTING" : m === "ERASE" ? "ERASING" : "WRITING"} TRACK ${p2(t)}  SIDE ${s}`, d);
       XC.cells[i] = 3;
     }
   }
-  XC.busy = false;
+  XC.busy = false; XC.cur = -1;
   if (XC.abort) { XC.status = "STOPPED."; return; }
   XC.status = `${m} COMPLETE.  ${errors} ERROR${errors === 1 ? "" : "S"}.`;
   if (XC.tgt === 1 && writes && XC.start === 0 && XC.end === 79) {
@@ -1932,9 +2088,9 @@ async function xcRun() {
     else if (XC.src === 0) df1Copied();
   }
 }
-function xcClick(p, btn) {
-  if (btn === 2) { XC.abort = true; mode = "wb"; dirty(); return; }
-  const { ox, oy, f } = XC.T, x = (p.x - ox) / f, y = (p.y - oy) / f;
+function xcClick(e) {
+  if (e.button === 2) { XC.abort = true; mode = "wb"; dirty(); return; }
+  const { x, y } = XR.at(e);
   const inR = (x0, y0, w, h) => x >= x0 && x < x0 + w && y >= y0 && y < y0 + h;
   ac();
   if (inR(138, 1, 364, 33)) { XC.abort = true; mode = "wb"; dirty(); return; }            // logo = quit
@@ -1943,16 +2099,15 @@ function xcClick(p, btn) {
   if (inR(53, 59, 128, 20)) { XC.mode = (XC.mode + 1) % XMODES.length; XC.cells.fill(0); XC.status = "MODE: " + XMODES[XC.mode]; return; }
   for (const [key, x0] of [["start", 229], ["end", 315]]) for (let k = 0; k < 2; k++) {
     const step = k ? 1 : 10, cx = x0 + k * 16;
-    if (inR(cx, 58, 16, 6) || inR(cx, 73, 16, 6)) {
-      const up = y < 66;
-      XC[key] = clamp(XC[key] + (up ? step : -step), 0, 79);
+    if (inR(cx, 58, 16, 22)) {
+      XC[key] = clamp(XC[key] + (y < 69 ? step : -step), 0, 79);
       if (XC.start > XC.end) { if (key === "start") XC.end = XC.start; else XC.start = XC.end; }
       XC.status = `START ${p2(XC.start)}   END ${p2(XC.end)}`; snd("step"); return;
     }
   }
   for (let i = 0; i < 4; i++) {
-    if (inR(XDRV[i], 101, 50, 19)) { if (i > 1) { XC.status = "DRIVE " + i + " NOT CONNECTED"; snd("err"); } else { XC.src = i; XC.status = "SOURCE: DF" + i + ":"; } return; }
-    if (inR(XDRV[i], 120, 50, 46)) { if (i > 1) { XC.status = "DRIVE " + i + " NOT CONNECTED"; snd("err"); } else { XC.tgt = i; XC.status = "TARGET: DF" + i + ":"; } return; }
+    if (inR(XDRV[i], 96, 50, 38)) { if (i > 1) { XC.status = "DRIVE " + i + " NOT CONNECTED"; snd("err"); } else { XC.src = i; XC.status = "SOURCE: DF" + i + ":"; } return; }
+    if (inR(XDRV[i], 134, 50, 32)) { if (i > 1) { XC.status = "DRIVE " + i + " NOT CONNECTED"; snd("err"); } else { XC.tgt = i; XC.status = "TARGET: DF" + i + ":"; } return; }
   }
 }
 
