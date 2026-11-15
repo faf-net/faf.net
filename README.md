@@ -13,10 +13,11 @@ wide). No frameworks, no build step, no trackers.
 |---|---|
 | `index.html` | the Workbench (HTML/CSS/JS inline, Topaz 8 embedded) |
 | `kickstart13.png` | the Workbench 1.3 disk in hand, shown in the "Kickstart 1.3" window |
+| `tut.png` | the Deluxe Paint picture "King Tut" (Avril Harrison, 1985), shown as a text graphic from the "King Tut" icon in the System drawer |
 | `pgpkey.asc` | the OpenPGP public key (also on keys.openpgp.org and via WKD) |
 | `lokale-ki/`, `local-ai/` | the page "Local AI on a NAS" in German and English, as served at faf.net/lokale-ki and faf.net/local-ai. Built output: the source and the generator live in [faf-net/ugreen-idx6011-egpu-llm](https://github.com/faf-net/ugreen-idx6011-egpu-llm) (`web/bau.py`), so do not edit these files here. Fonts under the SIL Open Font License, see `fonts/LIZENZ.md` in each folder. |
 
-**Deployment:** copy `index.html`, `kickstart13.png`, `pgpkey.asc` and the two page folders to the web root. Done.
+**Deployment:** copy `index.html`, `kickstart13.png`, `tut.png`, `pgpkey.asc` and the two page folders to the web root. Done.
 
 ## What's inside
 
