@@ -1383,7 +1383,7 @@ const MENUS = [
     ["Open",      () => !!selIcon(), () => { const ic = selIcon(); if (ic) ic.act(); }],
     ["Close",     () => !!active,    () => closeWin(active)],
     ["Duplicate", NO], ["Rename", NO],
-    ["Info",      () => !!selIcon(), () => { const ic = selIcon(); if (ic && ic.label === "About") openAbout(); else openInfo(ic); }],   // Info on "About" shows the About text itself
+    ["Info",      () => true, () => { const ic = selIcon(); if (!ic || ic.label === "About") openAbout(); else openInfo(ic); }],   // always available: without a selected icon, or on "About", it shows the About text
     ["Discard", NO] ]},
   { t:"Disk", items:[ ["Empty Trash", NO], ["Initialize", NO] ]},
   { t:"Special", items:[
