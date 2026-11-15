@@ -12,17 +12,16 @@ hoch wie breit). Keine Frameworks, kein Build-Schritt, keine Tracker.
 | Datei | Inhalt |
 |---|---|
 | `index.html` | die Workbench (HTML/CSS/JS inline, Topaz-8 eingebettet) |
-| `wopr.html` | WOPR-Terminal aus *WarGames* (1983) — grüner CRT-Look, Tic-Tac-Toe gegen eine unschlagbare KI |
 | `kickstart13.png` | die Workbench-1.3-Diskette mit Hand, im Fenster „Kickstart 1.3“ |
 | `pgpkey.asc` | der öffentliche OpenPGP-Schlüssel (auch bei keys.openpgp.org und per WKD) |
 | `v1/` | erster Stand der Workbench (Sicherung) |
 
-**Deployment:** `index.html`, `wopr.html`, `kickstart13.png` und `pgpkey.asc` ins Web-Root, fertig.
+**Deployment:** `index.html`, `kickstart13.png` und `pgpkey.asc` ins Web-Root, fertig.
 
 ## Was drin ist
 
 ```
- Desktop   faf.net · RAM DISK · DF1:NDOS · WOPR
+ Desktop   faf.net · RAM DISK · DF1:NDOS
  faf.net   About · GitHub · Workbench
            System · Utilities · Games
            PGP Key · Trashcan
@@ -59,7 +58,6 @@ hoch wie breit). Keine Frameworks, kein Build-Schritt, keine Tracker.
   blocken, bauen, tunneln, schräg graben, graben), Auswurfrate, Pause, Zeitraffer und Atombombe;
   gezeichnet in den vier Workbench-Farbregistern, Palette und Prefs färben es also mit um.
   Der Fortschritt bleibt im Browser. Maus oder Touch; 1–8, P, F, N, R, Esc.
-- **WOPR** auf dem Desktop führt zum WarGames-Terminal.
 - **Windows95.exe** liegt im Trashcan. Es braucht einen richtigen Computer; wer es trotzdem
   startet, bekommt auf einem eigenen Screen den Bluescreen. Eine Taste führt zurück,
   Strg+Alt+Entf startet den Amiga neu.

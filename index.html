@@ -34,7 +34,7 @@
   <h1>faf.net</h1>
   <p>FAF = "FAF Ain't Falken". A private node on the net. Run for fun, not for profit. No ads, no trackers, no cookies.</p>
   <p>OpenPGP fingerprint: 1E27 72BA 59E0 791E 146C CB23 5F8D 266C 7127 8827</p>
-  <p><a href="wopr.html">WOPR terminal</a> · <a href="lokale-ki/">Lokale KI auf dem NAS</a> · <a href="local-ai/">Local AI on a NAS</a> · <a href="https://github.com/faf-net">GitHub: faf-net</a></p>
+  <p><a href="lokale-ki/">Lokale KI auf dem NAS</a> · <a href="local-ai/">Local AI on a NAS</a> · <a href="https://github.com/faf-net">GitHub: faf-net</a></p>
 </div>
 <noscript><p style="color:#fff;font:16px monospace;padding:2em">faf.net — a private node on the net. (This Workbench needs JavaScript.)</p></noscript>
 
@@ -371,11 +371,6 @@ const ICON = {
       "  2212121212121212121212121212222",
       "    222222222222222222222222222",
       "" ])),   // Utilities/Notepad.info, original from the Workbench1.3 disk
-  wopr: makeIcon(36, 18, g => {             // WOPR as a mainframe "volume" — lamps blink at draw time
-    g.rect(0, 0, 36, 18, 2); g.rect(0, 0, 36, 1, 1); g.rect(0, 0, 1, 18, 1);
-    g.txt("WOPR", 2, 1, 3);
-    for (let y = 11; y < 17; y += 2) for (let x = 3; x < 33; x += 3) g.rect(x, y, 2, 1, 1);
-  }),
   clock: makeIcon(43, 20, g => g.bits([
       "               2222222222222",
       "          22222211112221111222222",
@@ -524,8 +519,7 @@ const mkIcon = (label, img, act) => ({ label, img, act, cx:0, y:0, rx:0, sel:fal
 
 const deskIcons = [
   mkIcon("faf.net",  "sysdisk", () => openDisk()),
-  mkIcon("RAM DISK", "disk", () => openRam()),
-  mkIcon("WOPR",     "wopr", () => goWopr())
+  mkIcon("RAM DISK", "disk", () => openRam())
 ];
 function layoutDesk(reset) {
   deskIcons.forEach((ic, i) => {
@@ -759,19 +753,19 @@ const INFO_NOTE = {
   "Kickstart":"34.5", "Shell":"1> _", "Clock":"tick", "Prefs":"4096 colours", "Calculator":"no slide rule needed",
   "X-Copy":"copy only your own disks", "VirusX":"trust no bootblock", "SysInfo":"68000 at 7.09 MHz",
   "SCA-Virus":"harmless re-enactment", "ByteBandit":"harmless re-enactment", "Caves":"boulders included", "Bitlings":"mind the gap",
-  "faf.net":"FAF Ain't Falken", "RAM DISK":"gone after reboot", "DF1:NDOS":"", "WOPR":"SHALL WE PLAY A GAME?"
+  "faf.net":"FAF Ain't Falken", "RAM DISK":"gone after reboot", "DF1:NDOS":""
 };
 function openInfo(ic) {
   if (!ic) return;
   const im = ICON[ic.img];
-  const kind = /disk/.test(ic.img) || ic.img === "wopr" ? "Disk" : ic.img === "drawer" ? "Drawer" : ic.img === "trash" ? "Garbage"
+  const kind = /disk/.test(ic.img) ? "Disk" : ic.img === "drawer" ? "Drawer" : ic.img === "trash" ? "Garbage"
              : ["doc", "picture", "pgp"].includes(ic.img) ? "Project" : "Tool";
   const h = [...ic.label].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 7);
   const bytes = ic.label === "Windows95.exe" ? 25165824 : 900 + h % 24000, blocks = Math.ceil(bytes / 488) + 1;          // OFS: 488 data bytes a block
   const L = [["Name:    " + ic.label, WH], ["Type:    " + kind, WH]];
   if (kind === "Disk") {
     const d = { "faf.net":[1386, 372], "RAM DISK":[14, 0] }[ic.label];
-    L.push(["Status:  " + (ic.label === "WOPR" ? "Read Only" : "Read/Write"), WH]);
+    L.push(["Status:  Read/Write", WH]);
     L.push(d ? ["Blocks:  " + d[0] + " used, " + d[1] + " free", WH] : ["Blocks:  ???", WH]);
   } else if (kind === "Tool" || kind === "Project") {
     L.push(["Blocks:  " + blocks, WH], ["Bytes:   " + bytes, WH]);
@@ -897,7 +891,6 @@ function goGithub() {
   if (w) w.opener = null; else setTimeout(() => { location.href = GITHUB; }, 400);
 }
 function goKI() { busy(3000); titleMsg = { t:"Loading Lokale KI ...", until:performance.now() + 3000 }; setTimeout(() => { location.href = "lokale-ki/"; }, 700); }
-function goWopr() { busy(3000); titleMsg = { t:"Loading WOPR ...", until:performance.now() + 3000 }; setTimeout(() => { location.href = "wopr.html"; }, 700); }
 
 /* ---------- window chrome --------------------------------------------- */
 function depthGadgets(dx, y) {               // WB 1.3: 50 wide, outlines in colour 0 (measured via TAWS)
@@ -975,13 +968,6 @@ function drawWin(w) {
 function drawIcon(ic, ox, oy) {
   const im = ICON[ic.img], ix = ox + ic.cx - (im.w >> 1), slot = ic.slot || im.h, iy = oy + ic.y + slot - im.h;
   ctx.drawImage(ic.sel ? im.s : im.n, ix, iy);
-  if (ic.img === "wopr") {                     // WOPR's lamps never rest
-    const tk = Math.floor(performance.now() / 350);
-    for (let k = 0, y = 11; y < 17; y += 2) for (let x = 3; x < 33; x += 3, k++) {
-      const v = ((k * 2654435761 + tk * 40503 + (k >> 2) * tk) >>> 0) % 7;
-      if (v < 3) fill(ix + x, iy + y, 2, 1, ic.sel ? [BL, WH, BK][v] : [OR, BK, OR][v]);
-    }
-  }
   text(ic.label, ox + ic.cx - (ic.lw >> 1), oy + ic.y + slot + 2, WH);
 }
 function iconHit(list, x, y) {
@@ -1063,11 +1049,11 @@ function exec(raw) {
     case "": break;
     case "help": case "?":
       out("DIR INFO DATE AVAIL VERSION ECHO TYPE");
-      out("ABOUT CLOCK WOPR GITHUB PALETTE CLS ENDCLI");
+      out("ABOUT CLOCK GITHUB PALETTE CLS ENDCLI");
       out("XCOPY VIRUSX SYSINFO CAVES PGP REBOOT SOUND");
       out("PREFS CALCULATOR BITLINGS WINDOWS95.EXE"); break;
     case "dir": case "list":
-      out("     Trashcan (dir)"); out("  About     Clock     GitHub    Shell");  out("  Workbench WOPR"); break;
+      out("     Trashcan (dir)"); out("  About     Clock     GitHub    Shell");  out("  Workbench"); break;
     case "info":
       out("Unit Size  Used Free Full Errs Status   Name");
       out("DF0: 880K  1386  372  79%   0  Read/Write faf.net");
@@ -1090,7 +1076,6 @@ function exec(raw) {
     case "clock": openClock(); break;
     case "palette": out("Palette: " + THEMES[theme === "amiga" ? "workbench" : "amiga"].name); toggleTheme(); break;
     case "github": case "git": out("Opening " + GITHUB + " ..."); goGithub(); break;
-    case "wopr": case "joshua": out("Connecting to WOPR ..."); goWopr(); break;
     case "loadwb": out("Workbench is already running"); break;
     case "format": case "delete": case "initialize": out("Not on this disk, you don't."); break;
     case "cls": case "clear": sh.lines = []; break;
@@ -1754,7 +1739,7 @@ function openVirusX() {
 
 /* ---------- DF1: ------------------------------------------------------- */
 const df1 = mkIcon("DF1:NDOS", "disk", () => openNDOS());
-deskIcons.splice(2, 0, df1);              // faf.net · RAM DISK · DF1: · WOPR
+deskIcons.push(df1);                      // faf.net · RAM DISK · DF1:
 function df1Copied() { df1.label = "faf.net"; df1.lw = 56; df1.img = "sysdisk"; df1.act = () => openDisk("df1"); }
 function df1Reset()  { df1.label = "DF1:NDOS"; df1.lw = 64; df1.img = "disk"; df1.act = () => openNDOS(); }
 
