@@ -1157,10 +1157,10 @@ const BOOT = [
   "faf.net Workbench Disk. Release 1.3.3 version 34.34"
 ];
 let boot = { lines:[], cur:"", skip:false }, wake = null;
-async function runBoot() {
+async function runBoot(direct) {             // direct: first page load goes straight to the Workbench; REBOOT still shows the sequence
   mode = "boot"; wins = []; active = null; drag = null; menu = null; titleMsg = null;
   deselectAll(); layoutDesk(true);
-  boot = { lines:[], cur:"", skip:reduce };
+  boot = { lines:[], cur:"", skip:reduce || !!direct };
   const b = boot;
   const sl = ms => b.skip ? Promise.resolve() : new Promise(r => { const t = setTimeout(r, ms); wake = () => { clearTimeout(t); r(); }; });
   await sl(450);
@@ -1233,7 +1233,9 @@ function renderWB() {
   const now = performance.now();
   if (titleMsg && now > titleMsg.until) titleMsg = null;
   fill(0, 0, LW, 10, WH);
-  text(titleMsg ? titleMsg.t : "Workbench release.    " + freeMem() + " free memory", 4, 1, BL);
+  const room = Math.floor((LW - 53 - 8) / 8);        // characters that fit left of the depth gadgets
+  const bar = ["faf.net Workbench release.    " + freeMem() + " free memory", "faf.net Workbench release. " + freeMem(), "faf.net Workbench release.", "faf.net Workbench"].find(s => s.length <= room) || "faf.net";
+  text(titleMsg ? titleMsg.t : bar, 4, 1, BL);
   depthGadgets(LW - 53, 0);
 
   deskIcons.forEach(ic => drawIcon(ic, 0, 0));
@@ -3104,7 +3106,7 @@ try {                                     // colours saved from Preferences
   if (Array.isArray(c) && c.length === 4 && c.every(x => /^#[0-9a-f]{6}$/i.test(x))) applyPal(c);
 } catch (_) {}
 resize();
-runBoot();
+runBoot(true);
 })();
 </script>
 </body>
