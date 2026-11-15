@@ -34,7 +34,7 @@
   <h1>faf.net</h1>
   <p>FAF = "FAF Ain't Falken". A private node on the net. Run for fun, not for profit. No ads, no trackers, no cookies.</p>
   <p>OpenPGP fingerprint: 1E27 72BA 59E0 791E 146C CB23 5F8D 266C 7127 8827</p>
-  <p><a href="wopr.html">WOPR terminal</a> · <a href="https://github.com/faf-net">GitHub: faf-net</a></p>
+  <p><a href="wopr.html">WOPR terminal</a> · <a href="lokale-ki/">Lokale KI auf dem NAS</a> · <a href="local-ai/">Local AI on a NAS</a> · <a href="https://github.com/faf-net">GitHub: faf-net</a></p>
 </div>
 <noscript><p style="color:#fff;font:16px monospace;padding:2em">faf.net — a private node on the net. (This Workbench needs JavaScript.)</p></noscript>
 
@@ -578,10 +578,10 @@ const cascade = () => wins.length * 14;
 function openDisk(id = "disk") {
   openWin({ id, title:"faf.net", type:"drawer", gauge:true, fill:.79, mem:18432,
     x: (LW < 520 ? 6 : Math.floor(LW * .1)) + (id === "disk" ? 0 : 24), y: 22 + (id === "disk" ? 0 : 16), w: 278, h: 136,
-    rows: [3, 3, 2],                          // About · GitHub · Workbench / System · Utilities · Games / PGP Key · Trashcan
+    rows: [3, 3, 3],                          // About · GitHub · Workbench / System · Utilities · Games / PGP Key · Lokale KI · Trashcan
     icons: [ mkIcon("About", "doc", openAbout), mkIcon("GitHub", "github", goGithub), mkIcon("Workbench", "palette", toggleTheme),
              mkIcon("System", "drawer", openSystem), mkIcon("Utilities", "drawer", openUtil), mkIcon("Games", "drawer", openGames),
-             mkIcon("PGP Key", "pgp", () => openPGP()), mkIcon("Trashcan", "trash", openTrash) ] });
+             mkIcon("PGP Key", "pgp", () => openPGP()), mkIcon("Lokale KI", "ki", goKI), mkIcon("Trashcan", "trash", openTrash) ] });
 }
 function openSystem() {
   openWin({ id:"system", title:"System", type:"drawer", gauge:false, mem:12288, x:50 + cascade(), y:40 + cascade(), w:344, h:64,
@@ -755,7 +755,7 @@ ICON.prefs = makeIcon(63, 20, g => g.bits([
 const INFO_NOTE = {
   "About":"yes, it recurses", "GitHub":"github.com/faf-net", "Workbench":"1.3 or 1.0 - you choose",
   "System":"the boring bits", "Utilities":"handle with care", "Games":"for the lunch break",
-  "PGP Key":"5F8D 266C 7127 8827", "Windows95.exe":"requires a real computer", "Trashcan":"empty. honest.",
+  "PGP Key":"5F8D 266C 7127 8827", "Lokale KI":"125B on a NAS","Windows95.exe":"requires a real computer", "Trashcan":"empty. honest.",
   "Kickstart":"34.5", "Shell":"1> _", "Clock":"tick", "Prefs":"4096 colours", "Calculator":"no slide rule needed",
   "X-Copy":"copy only your own disks", "VirusX":"trust no bootblock", "SysInfo":"68000 at 7.09 MHz",
   "SCA-Virus":"harmless re-enactment", "ByteBandit":"harmless re-enactment", "Caves":"boulders included", "Bitlings":"mind the gap",
@@ -896,6 +896,7 @@ function goGithub() {
   const w = window.open(GITHUB, "_blank");     // "noopener" as feature would always return null
   if (w) w.opener = null; else setTimeout(() => { location.href = GITHUB; }, 400);
 }
+function goKI() { busy(3000); titleMsg = { t:"Loading Lokale KI ...", until:performance.now() + 3000 }; setTimeout(() => { location.href = "lokale-ki/"; }, 700); }
 function goWopr() { busy(3000); titleMsg = { t:"Loading WOPR ...", until:performance.now() + 3000 }; setTimeout(() => { location.href = "wopr.html"; }, 700); }
 
 /* ---------- window chrome --------------------------------------------- */
@@ -3046,6 +3047,13 @@ function openGames() {
 }
 
 /* ---------- PGP Key — the address never appears as text in the page source */
+ICON.ki = makeIcon(38, 20, g => {            // a chip with "KI" on it: the local-AI page; the dot in the corner marks pin 1
+  for (let y = 4; y < 17; y += 3) { g.rect(2, y, 6, 2, 1); g.rect(30, y, 6, 2, 1); g.rect(2, y + 1, 6, 1, 2); g.rect(30, y + 1, 6, 1, 2); }
+  for (let x = 11; x < 27; x += 4) { g.rect(x, 0, 2, 3, 1); g.rect(x, 17, 2, 3, 1); }
+  g.rect(7, 2, 24, 16, 2); g.frame(7, 2, 24, 16, 1); g.frame(8, 3, 22, 14, 2);
+  g.txt("KI", 11, 6, 3);
+  g.rect(10, 5, 2, 1, 1);
+});
 ICON.pgp = makeIcon(34, 22, g => {           // the old PGP padlock, tipped over a little
   const a = -0.2, ca = Math.cos(a), sa = Math.sin(a);
   for (let y = 0; y < 22; y++) for (let x = 0; x < 34; x++) {
