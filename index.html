@@ -1032,7 +1032,7 @@ const INFO_NOTE = {
   "Kickstart":"34.5", "King Tut":"Deluxe Paint, 1985", "Shell":"1> _", "Clock":"tick", "Prefs":"4096 colours", "Calculator":"no slide rule needed",
   "X-Copy":"copy only your own disks", "VirusX":"trust no bootblock", "SysInfo":"68000 at 7.09 MHz",
   "SCA-Virus":"harmless re-enactment", "ByteBandit":"harmless re-enactment", "Caves":"boulders included", "Bitlings":"mind the gap",
-  "faf.net":"a private website", "RAM DISK":"gone after reboot", "DF1:NDOS":""
+  "faf.net":"a private website", "RAM DISK":"gone after reboot", "125B.gguf":"53 GiB of 64 - it fits", "DF1:NDOS":""
 };
 function openInfo(ic) {
   if (!ic) return;
@@ -1148,7 +1148,10 @@ function openUtil() {
              mkIcon("SCA-Virus", "sca", () => startSCA()), mkIcon("ByteBandit", "bandit", () => startBB()),
              mkIcon("Calculator", "calc", openCalc) ] });
 }
-function openRam()   { openWin({ id:"ram",   title:"RAM DISK", type:"drawer", gauge:true, fill:1, mem:8192, x:LW - 280, y:40, w:210, h:70 }); }
+function openRam()   {                                            // full to the brim: the language model lives in RAM
+  openWin({ id:"ram",   title:"RAM DISK", type:"drawer", gauge:true, fill:1, mem:8192, x:LW - 280, y:40, w:210, h:70, cell:120,
+    icons: [ mkIcon("125B.gguf", "ki", goKI) ] });
+}
 function openTrash() {
   openWin({ id:"trash", title:"Trashcan", type:"drawer", gauge:false, mem:8192, x:60 + cascade(), y:60 + cascade(), w:200, h:70, cell:120,
     icons: [ mkIcon("Windows95.exe", "win95", openWin95) ] });       // deleted, but not quite gone
