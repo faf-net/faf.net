@@ -1,0 +1,112 @@
+@font-face{font-family:"Instrument Serif";src:url("fonts/instrument-serif-400.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Instrument Serif";src:url("fonts/instrument-serif-400-italic.woff2") format("woff2");font-weight:400;font-style:italic;font-display:swap}
+@font-face{font-family:"Atkinson Hyperlegible Next";src:url("fonts/atkinson-400.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Atkinson Hyperlegible Next";src:url("fonts/atkinson-600.woff2") format("woff2");font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:"Atkinson Hyperlegible Next";src:url("fonts/atkinson-700.woff2") format("woff2");font-weight:700 800;font-style:normal;font-display:swap}
+@font-face{font-family:"JetBrains Mono";src:url("fonts/jetbrains-mono-400.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"JetBrains Mono";src:url("fonts/jetbrains-mono-700.woff2") format("woff2");font-weight:500 700;font-style:normal;font-display:swap}
+:root{--grund:#1a1918;--panel:#232120;--panel-2:#2b2827;--linie:#3a3634;--rille:#151413;--schrift:#e9e3d8;--gedaempft:#a49c90;--schwach:#6f6961;--fett:#f5f1eb;--bernstein:#cc9166;--salbei:#93a373;--stahl:#7d97ab;--gold:#c7a854;--rose:#c07f73;--malve:#b1899b;--petrol:#7fa79f;--on-bernstein:#1a1918;--fokus:{stahl};--rand-bedien:#787269;--feld:{rille};--knopf-hover:{status-bernstein};--marker-bernstein:#47372c;--marker-salbei:#383c2f;--marker-gold:#453d27;--marker-rose:#44322f;--marker-stahl:#33383d;--dezent-bernstein:#3e3128;--dezent-salbei:#32352a;--dezent-gold:#3d3624;--dezent-rose:#3b2d2a;--dezent-stahl:#2e3235;--band-bernstein:#554132;--band-salbei:#424736;--band-gold:#53482c;--band-rose:#513b36;--band-stahl:#3b4349;--marker-petrol:#2d3d3a;--marker-malve:#403539;--band-petrol:#3b4845;--band-malve:#4c3e43;--dezent-petrol:#2e3533;--dezent-malve:#382f32;--pille-salbei:#3e4233;--pille-bernstein:#4f3d2f;--pille-gold:#4e442a;--pille-rose:#4c3833;--pille-stahl:#383f44;--status-salbei:#adbb8e;--status-gold:#ddc274;--status-rose:#d69a8d;--status-bernstein:#e0a87f;--status-stahl:#9ab2c4;--schein-rose:#c07f734d;--schein-bernstein:#cc91664d;--schein-wort-rose:#e8b1a5;--schein-wort-bernstein:#f0bf9a;--schimmer-schrift:#c0b8ab;--schimmer-bernstein:#e0a87f;--schimmer-gold:#dcc37a;--schimmer-stahl:#9db3c4;--ansi-hell-rose:#d69a8d;--ansi-hell-salbei:#adbb8e;--ansi-hell-gold:#ddc274;--ansi-hell-stahl:#9ab2c4;--ansi-hell-malve:#c9a3b4;--ansi-hell-petrol:#9bc0b8;--diagramm-reihe:{stahl};--diagramm-hervorhebung:{bernstein};--diagramm-1:{bernstein};--diagramm-2:{stahl};--diagramm-3:{petrol};--diagramm-4:{gold};--textgrafik-grund-1:#0d0c0b;--textgrafik-grund-2:#151413;--textgrafik-grund-3:#1a1918;--textgrafik-grund-4:#232120;--textgrafik-grund-5:#2b2827;--textgrafik-grund-6:#3a3634;--textgrafik-grund-7:#4f4a46;--textgrafik-grund-8:#6f6961;--textgrafik-grund-9:#a49c90;--textgrafik-grund-10:#e9e3d8;--textgrafik-grund-11:#f5f1eb;--textgrafik-bernstein-1:#3e2a1c;--textgrafik-bernstein-2:#6b4a30;--textgrafik-bernstein-3:#9a6b45;--textgrafik-bernstein-4:#cc9166;--textgrafik-bernstein-5:#e3b48e;--textgrafik-bernstein-6:#f3d6bb;--textgrafik-salbei-1:#2a3020;--textgrafik-salbei-2:#4a5638;--textgrafik-salbei-3:#6e7d52;--textgrafik-salbei-4:#93a373;--textgrafik-salbei-5:#bccaa0;--textgrafik-stahl-1:#1f2a33;--textgrafik-stahl-2:#3a4c5a;--textgrafik-stahl-3:#5a7385;--textgrafik-stahl-4:#7d97ab;--textgrafik-stahl-5:#a9bfcf;--textgrafik-gold-1:#3a3016;--textgrafik-gold-2:#6a5a26;--textgrafik-gold-3:#9a843c;--textgrafik-gold-4:#c7a854;--textgrafik-gold-5:#e4cd85;--textgrafik-rose-1:#3a1f1b;--textgrafik-rose-2:#6a3a33;--textgrafik-rose-3:#9a5b50;--textgrafik-rose-4:#c07f73;--textgrafik-rose-5:#deaca2;color-scheme:dark}
+@media (prefers-color-scheme:light){:root{--grund:#efeae1;--panel:#f7f3ec;--panel-2:#ece6db;--linie:#d3cabb;--rille:#e2dbcf;--schrift:#2a2724;--gedaempft:#6a6258;--schwach:#8b8377;--fett:#171512;--bernstein:#975b34;--salbei:#5e7040;--stahl:#456579;--gold:#7e6820;--rose:#9c4d40;--malve:#8c5c72;--petrol:#4e716a;--on-bernstein:#f7f3ec;--fokus:{stahl};--rand-bedien:#817a6f;--feld:{panel};--knopf-hover:{status-bernstein};--marker-bernstein:#d9c6b6;--marker-salbei:#cbccb9;--marker-gold:#d3cab1;--marker-rose:#dac3b9;--marker-stahl:#c5c9c7;--dezent-bernstein:#ddcdbe;--dezent-salbei:#d2d2c1;--dezent-gold:#d8d0ba;--dezent-rose:#decbc1;--dezent-stahl:#cdcfcc;--band-bernstein:#d2bba8;--band-salbei:#bfc2ac;--band-gold:#cabfa1;--band-rose:#d4b6ac;--band-stahl:#b7bebf;--marker-petrol:#c7ccc3;--marker-malve:#d6c7c5;--band-petrol:#bac2ba;--band-malve:#cebbbc;--dezent-petrol:#cfd2c9;--dezent-malve:#dbcecb;--pille-salbei:#c3c5b1;--pille-bernstein:#d5bfad;--pille-gold:#cdc3a7;--pille-rose:#d6bbb1;--pille-stahl:#bcc2c2;--status-salbei:#485530;--status-gold:#5f4e18;--status-rose:#7a3c32;--status-bernstein:#734528;--status-stahl:#385262;--schein-rose:#9c4d4000;--schein-bernstein:#975b3400;--schein-wort-rose:#7a3c32;--schein-wort-bernstein:#734528;--schimmer-schrift:#a49c90;--schimmer-bernstein:#cc9166;--schimmer-gold:#c7a854;--schimmer-stahl:#7d97ab;--ansi-hell-rose:#d69a8d;--ansi-hell-salbei:#adbb8e;--ansi-hell-gold:#ddc274;--ansi-hell-stahl:#9ab2c4;--ansi-hell-malve:#c9a3b4;--ansi-hell-petrol:#9bc0b8;--diagramm-reihe:{stahl};--diagramm-hervorhebung:{bernstein};--diagramm-1:{bernstein};--diagramm-2:{stahl};--diagramm-3:{petrol};--diagramm-4:{gold};--textgrafik-grund-1:#0d0c0b;--textgrafik-grund-2:#151413;--textgrafik-grund-3:#1a1918;--textgrafik-grund-4:#232120;--textgrafik-grund-5:#2b2827;--textgrafik-grund-6:#3a3634;--textgrafik-grund-7:#4f4a46;--textgrafik-grund-8:#6f6961;--textgrafik-grund-9:#a49c90;--textgrafik-grund-10:#e9e3d8;--textgrafik-grund-11:#f5f1eb;--textgrafik-bernstein-1:#3e2a1c;--textgrafik-bernstein-2:#6b4a30;--textgrafik-bernstein-3:#9a6b45;--textgrafik-bernstein-4:#cc9166;--textgrafik-bernstein-5:#e3b48e;--textgrafik-bernstein-6:#f3d6bb;--textgrafik-salbei-1:#2a3020;--textgrafik-salbei-2:#4a5638;--textgrafik-salbei-3:#6e7d52;--textgrafik-salbei-4:#93a373;--textgrafik-salbei-5:#bccaa0;--textgrafik-stahl-1:#1f2a33;--textgrafik-stahl-2:#3a4c5a;--textgrafik-stahl-3:#5a7385;--textgrafik-stahl-4:#7d97ab;--textgrafik-stahl-5:#a9bfcf;--textgrafik-gold-1:#3a3016;--textgrafik-gold-2:#6a5a26;--textgrafik-gold-3:#9a843c;--textgrafik-gold-4:#c7a854;--textgrafik-gold-5:#e4cd85;--textgrafik-rose-1:#3a1f1b;--textgrafik-rose-2:#6a3a33;--textgrafik-rose-3:#9a5b50;--textgrafik-rose-4:#c07f73;--textgrafik-rose-5:#deaca2;color-scheme:light}}
+@media print{:root{--grund:#efeae1;--panel:#f7f3ec;--panel-2:#ece6db;--linie:#d3cabb;--rille:#e2dbcf;--schrift:#2a2724;--gedaempft:#6a6258;--schwach:#8b8377;--fett:#171512;--bernstein:#975b34;--salbei:#5e7040;--stahl:#456579;--gold:#7e6820;--rose:#9c4d40;--malve:#8c5c72;--petrol:#4e716a;--on-bernstein:#f7f3ec;--fokus:{stahl};--rand-bedien:#817a6f;--feld:{panel};--knopf-hover:{status-bernstein};--marker-bernstein:#d9c6b6;--marker-salbei:#cbccb9;--marker-gold:#d3cab1;--marker-rose:#dac3b9;--marker-stahl:#c5c9c7;--dezent-bernstein:#ddcdbe;--dezent-salbei:#d2d2c1;--dezent-gold:#d8d0ba;--dezent-rose:#decbc1;--dezent-stahl:#cdcfcc;--band-bernstein:#d2bba8;--band-salbei:#bfc2ac;--band-gold:#cabfa1;--band-rose:#d4b6ac;--band-stahl:#b7bebf;--marker-petrol:#c7ccc3;--marker-malve:#d6c7c5;--band-petrol:#bac2ba;--band-malve:#cebbbc;--dezent-petrol:#cfd2c9;--dezent-malve:#dbcecb;--pille-salbei:#c3c5b1;--pille-bernstein:#d5bfad;--pille-gold:#cdc3a7;--pille-rose:#d6bbb1;--pille-stahl:#bcc2c2;--status-salbei:#485530;--status-gold:#5f4e18;--status-rose:#7a3c32;--status-bernstein:#734528;--status-stahl:#385262;--schein-rose:#9c4d4000;--schein-bernstein:#975b3400;--schein-wort-rose:#7a3c32;--schein-wort-bernstein:#734528;--schimmer-schrift:#a49c90;--schimmer-bernstein:#cc9166;--schimmer-gold:#c7a854;--schimmer-stahl:#7d97ab;--ansi-hell-rose:#d69a8d;--ansi-hell-salbei:#adbb8e;--ansi-hell-gold:#ddc274;--ansi-hell-stahl:#9ab2c4;--ansi-hell-malve:#c9a3b4;--ansi-hell-petrol:#9bc0b8;--diagramm-reihe:{stahl};--diagramm-hervorhebung:{bernstein};--diagramm-1:{bernstein};--diagramm-2:{stahl};--diagramm-3:{petrol};--diagramm-4:{gold};--textgrafik-grund-1:#0d0c0b;--textgrafik-grund-2:#151413;--textgrafik-grund-3:#1a1918;--textgrafik-grund-4:#232120;--textgrafik-grund-5:#2b2827;--textgrafik-grund-6:#3a3634;--textgrafik-grund-7:#4f4a46;--textgrafik-grund-8:#6f6961;--textgrafik-grund-9:#a49c90;--textgrafik-grund-10:#e9e3d8;--textgrafik-grund-11:#f5f1eb;--textgrafik-bernstein-1:#3e2a1c;--textgrafik-bernstein-2:#6b4a30;--textgrafik-bernstein-3:#9a6b45;--textgrafik-bernstein-4:#cc9166;--textgrafik-bernstein-5:#e3b48e;--textgrafik-bernstein-6:#f3d6bb;--textgrafik-salbei-1:#2a3020;--textgrafik-salbei-2:#4a5638;--textgrafik-salbei-3:#6e7d52;--textgrafik-salbei-4:#93a373;--textgrafik-salbei-5:#bccaa0;--textgrafik-stahl-1:#1f2a33;--textgrafik-stahl-2:#3a4c5a;--textgrafik-stahl-3:#5a7385;--textgrafik-stahl-4:#7d97ab;--textgrafik-stahl-5:#a9bfcf;--textgrafik-gold-1:#3a3016;--textgrafik-gold-2:#6a5a26;--textgrafik-gold-3:#9a843c;--textgrafik-gold-4:#c7a854;--textgrafik-gold-5:#e4cd85;--textgrafik-rose-1:#3a1f1b;--textgrafik-rose-2:#6a3a33;--textgrafik-rose-3:#9a5b50;--textgrafik-rose-4:#c07f73;--textgrafik-rose-5:#deaca2;}}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{background:var(--grund);color:var(--schrift);font:16px/1.65 "Atkinson Hyperlegible Next","Segoe UI",system-ui,sans-serif;font-variant-numeric:tabular-nums}
+a{color:var(--bernstein);text-decoration-thickness:1px;text-underline-offset:3px}
+a:hover{color:var(--fett)}
+a:focus-visible{outline:2px solid var(--fokus);outline-offset:2px;border-radius:3px}
+b,strong{color:var(--fett);font-weight:700}
+main,.kopf,footer{max-width:1080px;margin:0 auto;padding:0 24px}
+.kopf{display:flex;flex-wrap:wrap;gap:8px 24px;align-items:center;padding-top:20px;padding-bottom:16px;border-bottom:1px solid var(--linie);font:13px/1.4 "JetBrains Mono",ui-monospace,Consolas,monospace}
+.marke{color:var(--fett);text-decoration:none;font-weight:700}
+.marke .cursor{color:var(--bernstein);margin-left:2px;animation:blink 1.2s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.marke .cursor{animation:none}html{scroll-behavior:auto}}
+.kopf nav{display:flex;flex-wrap:wrap;gap:4px 16px;flex:1}
+.kopf nav a{color:var(--gedaempft);text-decoration:none}
+.kopf nav a:hover{color:var(--bernstein)}
+.sprache{color:var(--gedaempft)}
+.auftakt{padding:64px 0 16px}
+.dach,.nr{font:500 11px/1.4 "JetBrains Mono",ui-monospace,Consolas,monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--gedaempft)}
+h1{font:400 clamp(40px,6.4vw,72px)/1.04 "Instrument Serif",Georgia,serif;letter-spacing:-.02em;color:var(--fett);margin:12px 0 24px;max-width:22ch}
+h2{font:400 clamp(28px,3.6vw,40px)/1.12 "Instrument Serif",Georgia,serif;letter-spacing:-.015em;color:var(--fett);margin:4px 0 16px}
+h3{font:600 19px/1.3 "Atkinson Hyperlegible Next",sans-serif;color:var(--fett);margin:0 0 4px}
+p{max-width:72ch;margin:0 0 16px}
+.vorspann{font-size:19px;line-height:1.55;max-width:66ch;color:var(--schrift)}
+section{padding:56px 0 8px;border-top:1px solid var(--linie);margin-top:40px}
+section.auftakt{border-top:0;margin-top:0}
+.nr{color:var(--bernstein)}
+.kacheln{display:grid;grid-template-columns:repeat(auto-fit,minmax(176px,1fr));gap:12px;margin:32px 0}
+.kachel{background:var(--panel);border:1px solid var(--linie);border-radius:6px;padding:16px}
+.kachel .wert{font:700 34px/1.1 "JetBrains Mono",ui-monospace,Consolas,monospace;color:var(--fett);letter-spacing:-.02em}
+.kachel.haupt .wert{color:var(--bernstein)}
+.kachel .was{font-weight:600;color:var(--fett);margin-top:8px;line-height:1.3}
+.kachel .neben{font-size:13px;color:var(--gedaempft);line-height:1.4;margin-top:4px}
+.plan{font:13px/1.55 "JetBrains Mono",ui-monospace,Consolas,monospace;color:var(--gedaempft);background:var(--panel);border:1px solid var(--linie);border-radius:6px;padding:16px 20px;overflow-x:auto;margin:0 0 16px}
+.plan b{color:var(--bernstein);font-weight:700}
+.status{font:13px/1.5 "JetBrains Mono",ui-monospace,Consolas,monospace;color:var(--gedaempft)}
+.konsole{color:var(--status-salbei);font-weight:700;white-space:nowrap}
+.anwendungen{display:grid;grid-template-columns:repeat(auto-fit,minmax(264px,1fr));gap:12px;margin:8px 0 24px}
+.anwendung{background:var(--panel);border:1px solid var(--linie);border-radius:6px;padding:20px}
+.anwendung p{font-size:15px;line-height:1.55;margin:8px 0 0}
+.anwendung .dach{display:block;margin-bottom:8px}
+.anwendung .mess{font:13px/1.5 "JetBrains Mono",ui-monospace,Consolas,monospace;color:var(--gedaempft);border-top:1px solid var(--linie);margin-top:12px;padding-top:12px}
+.anwendung .mess b{color:var(--bernstein)}
+.bild{margin:24px 0}
+.rollen{overflow-x:auto;max-width:100%}
+.bild svg{display:block;width:100%;min-width:720px;height:auto}
+table{border-collapse:collapse;width:100%;margin:8px 0 24px;font-size:15px}
+th{font:500 11px/1.4 "JetBrains Mono",ui-monospace,Consolas,monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--gedaempft);text-align:left;padding:8px 12px;border-bottom:1px solid var(--schwach);white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid var(--linie);vertical-align:top}
+td.zahl,th:not(:first-child){text-align:right}
+td.zahl{font:14px/1.6 "JetBrains Mono",ui-monospace,Consolas,monospace;white-space:nowrap}
+.band{background:var(--dezent-rose);border-radius:6px;padding:16px 20px;max-width:none;color:var(--schrift)}
+.pille{display:inline-block;font:700 12px/1 "Atkinson Hyperlegible Next",sans-serif;letter-spacing:.06em;text-transform:uppercase;padding:5px 8px 5px 9px;border-radius:0 3px 3px 0;margin-right:8px;vertical-align:2px}
+.pille.rose{background:var(--pille-rose);color:var(--status-rose);border-left:3px solid var(--rose)}
+.pille.gold{background:var(--pille-gold);color:var(--status-gold);border-left:3px solid var(--gold)}
+.wege{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(264px,1fr));gap:12px;margin:8px 0 24px}
+.wege li{background:var(--panel);border:1px solid var(--linie);border-radius:6px;padding:16px}
+.wege a{font-weight:600;display:block}
+.wege span{font-size:14px;color:var(--gedaempft)}
+footer{margin-top:64px;padding-top:24px;padding-bottom:48px;border-top:1px solid var(--linie);font-size:13px;color:var(--gedaempft)}
+footer p{max-width:none;margin-bottom:8px}
+@media (max-width:640px){.auftakt{padding-top:40px}section{padding-top:40px}.vorspann{font-size:17px}}
+@media print{.kopf nav,.cursor{display:none}.band,.pille{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+.schritte{list-style:none;counter-reset:schritt;display:grid;grid-template-columns:repeat(auto-fit,minmax(296px,1fr));gap:12px;margin:8px 0 24px}
+.schritte li{counter-increment:schritt;background:var(--panel);border:1px solid var(--linie);border-radius:6px;padding:20px;position:relative}
+.schritte li::before{content:counter(schritt);font:700 34px/1 "JetBrains Mono",ui-monospace,Consolas,monospace;color:var(--bernstein);display:block;margin-bottom:12px}
+.schritte p{font-size:15px;line-height:1.55;margin:8px 0 12px}
+.schritte a{font-size:14px}
+
+.szene,.rahmen{position:relative;border:1px solid var(--linie);border-radius:6px;margin:32px 0 24px;background:#0d0c0b}
+.rahmen{background:var(--panel)}
+.schild{position:absolute;left:14px;top:-9px;background:var(--grund);padding:0 8px;font:500 11px/1.5 "JetBrains Mono",ui-monospace,Consolas,monospace;letter-spacing:.14em;color:var(--gedaempft)}
+.szene img{display:block;width:100%;height:auto;border-radius:5px}
+.rahmen .plan{border:0;margin:0;background:transparent;padding:22px 20px 16px}
+.konsole-block{color:var(--schrift);line-height:1.6}
+.konsole-block .g{color:var(--gedaempft)}
+.konsole-block .a{color:var(--bernstein)}
+.konsole-block .s{color:var(--stahl)}
+.konsole-block .r{color:var(--schwach)}
+.konsole-block .x{color:var(--rose);font-weight:700}
+.konsole-block b{color:var(--fett)}
+.nr{display:flex;align-items:center;gap:12px}
+.nr::after{content:"";flex:1;border-top:1px dashed var(--linie)}
+section{border-top:0;margin-top:24px}
+.eof{font:500 11px/1.4 "JetBrains Mono",ui-monospace,Consolas,monospace;letter-spacing:.18em;color:var(--schwach);margin-top:24px}
+.kopf{position:sticky;top:0;z-index:10;background:var(--grund)}
+section{scroll-margin-top:72px}
+@media (max-width:760px){.kopf{gap:6px 16px;padding-top:12px;padding-bottom:10px}.kopf nav{flex:1 1 100%;order:3;flex-wrap:nowrap;overflow-x:auto;white-space:nowrap;scrollbar-width:none}.kopf nav::-webkit-scrollbar{display:none}.sprache{margin-left:auto}section{scroll-margin-top:96px}}
+@media print{.kopf{position:static}}
+/* Lesebreite: Fließtext etwas größer und breiter, damit rechts weniger Fläche leer bleibt, die Zeile aber lesbar kurz bleibt */
+body{font-size:17px}
+p{max-width:78ch}
+.vorspann{font-size:20px;max-width:70ch}
+.band{max-width:none}
+footer p{max-width:none}
+@media (max-width:640px){body{font-size:16px}.vorspann{font-size:17px}}
+/* Probe 15.11.2026: Fließtext über die volle Breite (Franks Wunsch, einmal ansehen). Rückweg: diese Zeile löschen. */
+p,.vorspann{max-width:none}
+
+h3{margin:32px 0 12px}
+.anwendung h3,.schritte h3{margin:0 0 4px}
+.regeln{white-space:pre-wrap}
