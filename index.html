@@ -4,7 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#0055aa">
-<title>faf.net</title>
+<title>faf.net — a private website on an Amiga Workbench</title>
+<meta name="description" content="A private website dressed up as an Amiga Workbench 1.3 desktop. It holds a field report on running a local 125B language model on a NAS at home, open-source projects and a few old Amiga programs. No ads, no trackers, no cookies.">
+<link rel="canonical" href="https://faf.net/">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="alternate icon" href="/favicon.ico" sizes="48x48">
+<meta property="og:title" content="faf.net — a private website on an Amiga Workbench">
+<meta property="og:description" content="A private website dressed up as an Amiga Workbench 1.3 desktop: local AI on a NAS, open-source projects and a few old Amiga programs.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://faf.net/">
+<meta property="og:image" content="https://faf.net/og.png">
 <!--
   faf.net — Workbench 1.3
   Font: Topaz a500 (Kickstart 1.x) bitmap © dMG/t!s^dS!, GPL-FE · Topaz © Amiga Inc.
@@ -836,7 +845,7 @@ const PIC = {
             }
             x.putImageData(d, 0, 0); return c;
           },
-          opt: () => ({ palette: Textgrafik.PALETTEN.workbench, grund: "0d0c0b", glanz: false }) },
+          opt: () => ({ palette: Textgrafik.PALETTEN.workbench.slice(0, 17), grund: "0d0c0b", glanz: false }) },   // ground and amber ladders only
   tut:  { img: TUT, cols: 180, note: "King Tut · Avril Harrison for Deluxe Paint, Electronic Arts 1985 · click to close",
           prep(im) {                                  // the picture itself, without the black bars left and right
             const c = document.createElement("canvas"), x0 = Math.round(im.naturalWidth * .165), w = Math.round(im.naturalWidth * .57);

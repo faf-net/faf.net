@@ -14,10 +14,13 @@ hoch wie breit). Keine Frameworks, kein Build-Schritt, keine Tracker.
 | `index.html` | die Workbench (HTML/CSS/JS inline, Topaz-8 eingebettet) |
 | `kickstart13.png` | die Workbench-1.3-Diskette mit Hand, im Fenster „Kickstart 1.3“ |
 | `tut.png` | das Deluxe-Paint-Bild „King Tut“ (Avril Harrison, 1985), als Textgrafik zu sehen über das Icon „King Tut“ in der Schublade System |
+| `favicon.svg`, `favicon.ico`, `og.png` | das Disketten-Symbol für den Browser-Tab und das Vorschaubild für geteilte Links |
+| `404.html` | die Seite für Adressen, die es nicht gibt: eine Guru Meditation |
+| `sitemap.xml`, `robots.txt`, `.htaccess` | Sitemap, Regeln für Suchmaschinen und die Serverregeln (ein Hostname, Kompression, Caching, Sicherheits-Header) |
 | `pgpkey.asc` | der öffentliche OpenPGP-Schlüssel (auch bei keys.openpgp.org und per WKD) |
 | `lokale-ki/`, `local-ai/` | die Seite „Lokale KI auf dem NAS“ auf Deutsch und Englisch, so wie sie unter faf.net/lokale-ki und faf.net/local-ai ausgeliefert wird. Gebaute Ausgabe: Quelle und Generator liegen in [faf-net/ugreen-idx6011-egpu-llm](https://github.com/faf-net/ugreen-idx6011-egpu-llm) (`web/bau.py`), diese Dateien also nicht hier bearbeiten. Schriften unter der SIL Open Font License, siehe `fonts/LIZENZ.md` im jeweiligen Ordner. |
 
-**Deployment:** `index.html`, `kickstart13.png`, `tut.png`, `pgpkey.asc` und die beiden Seitenordner ins Web-Root, fertig.
+**Deployment:** alles aus diesem Repo ins Web-Root, fertig.
 
 ## Was drin ist
 
