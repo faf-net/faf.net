@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url><loc>https://faf.net/</loc><lastmod>2026-11-17</lastmod></url>
-  <url><loc>https://faf.net/lokale-ki/</loc><lastmod>2026-11-19</lastmod>
+  <url><loc>https://faf.net/lokale-ki/</loc><lastmod>2026-11-21</lastmod>
     <xhtml:link rel="alternate" hreflang="de" href="https://faf.net/lokale-ki/"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://faf.net/local-ai/"/></url>
-  <url><loc>https://faf.net/local-ai/</loc><lastmod>2026-11-19</lastmod>
+  <url><loc>https://faf.net/local-ai/</loc><lastmod>2026-11-21</lastmod>
     <xhtml:link rel="alternate" hreflang="de" href="https://faf.net/lokale-ki/"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://faf.net/local-ai/"/></url>
 </urlset>
